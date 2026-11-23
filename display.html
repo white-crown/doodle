@@ -502,6 +502,40 @@
   var rt;
   addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(layout, 300); });
 
+  // ---------------------------------------------------------------- shuffle
+  // Every 5 seconds a few drawings glide to a new spot: swap with another
+  // drawing, or move into an empty slot. Drawings that are arriving are left alone.
+  function settled(it) {
+    var c = it.el.classList;
+    return !c.contains('popping') && !c.contains('carried') && !c.contains('leaving');
+  }
+  function moveTo(it, s) {
+    if (it.slot) it.slot.used = null;
+    s.used = it.row.id; it.slot = s;
+    it.el.style.transition = 'transform 1.6s cubic-bezier(.45,0,.2,1)';
+    placeAt(it, s);
+  }
+  function shuffleTick() {
+    if (document.hidden) return;
+    var list = Array.from(items.values()).filter(settled);
+    if (!list.length) return;
+    var n = Math.max(1, Math.min(4, Math.round(list.length * 0.2)));
+    for (var i = 0; i < n; i++) {
+      var a = list[Math.floor(Math.random() * list.length)];
+      var free = slots.filter(function (s) { return !s.used; });
+      var others = list.filter(function (x) { return x !== a; });
+      if (free.length && (Math.random() < 0.5 || !others.length)) {
+        moveTo(a, free[Math.floor(Math.random() * free.length)]);
+      } else if (others.length) {
+        var b = others[Math.floor(Math.random() * others.length)];
+        var sa = a.slot, sb = b.slot;
+        sa.used = null; sb.used = null; a.slot = null; b.slot = null;
+        moveTo(a, sb); moveTo(b, sa);
+      }
+    }
+  }
+  setInterval(shuffleTick, 5000);
+
   // Debug helper for previews: DW_test() pops the newest drawing again.
   window.DW_test = function () {
     var o = Array.from(items.values()).pop();
