@@ -137,7 +137,7 @@
   async function buildUI() {
     var cfg = await DW.loadEvent(db);
     var t = DW.theme(cfg.theme);
-    DW.applyVars(cfg.theme);
+    DW.applyVars(cfg.theme, cfg);
     $('heading').textContent = cfg.title || t.title;
     COLORS = t.palette; color = COLORS[0];
     $('shapes').innerHTML = ''; $('colors').innerHTML = '';

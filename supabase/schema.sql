@@ -123,3 +123,37 @@ begin
 end $$;
 revoke all on function public.doodle_set_code(text, text) from public;
 grant execute on function public.doodle_set_code(text, text) to anon, authenticated;
+
+
+-- v4: Birthday + Wedding themes, custom background per theme ------------------
+alter table public.doodle_events drop constraint if exists doodle_events_theme_check;
+alter table public.doodle_events add constraint doodle_events_theme_check
+  check (theme in ('christmas', 'qatar', 'newyear', 'birthday', 'wedding'));
+alter table public.doodle_events add column if not exists backgrounds jsonb not null default '{}'::jsonb;
+
+-- p_bg = {"c1": "#hex", "c2": "#hex", "image": "path"}; null or {} resets the theme to its default.
+create or replace function public.doodle_set_background(p_event text, p_theme text, p_bg jsonb, p_code text)
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  if not doodle_check(p_code) then return false; end if;
+  if p_theme not in ('christmas', 'qatar', 'newyear', 'birthday', 'wedding') then return false; end if;
+  insert into doodle_events (event) values (p_event) on conflict (event) do nothing;
+  if p_bg is null or p_bg = '{}'::jsonb then
+    update doodle_events set backgrounds = backgrounds - p_theme, updated_at = now() where event = p_event;
+  else
+    update doodle_events set backgrounds = backgrounds || jsonb_build_object(p_theme, p_bg), updated_at = now() where event = p_event;
+  end if;
+  return true;
+end $$;
+revoke all on function public.doodle_set_background(text, text, jsonb, text) from public;
+grant execute on function public.doodle_set_background(text, text, jsonb, text) to anon, authenticated;
+
+-- Background images: public bucket, images only, 5 MB max.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('doodle-bg', 'doodle-bg', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set public = true, file_size_limit = 5242880, allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
+
+drop policy if exists "doodle bg upload" on storage.objects;
+create policy "doodle bg upload" on storage.objects
+  for insert to anon, authenticated with check (bucket_id = 'doodle-bg');
+

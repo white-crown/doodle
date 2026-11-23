@@ -53,6 +53,11 @@
   @keyframes flap { from { transform: scaleY(1); } to { transform: scaleY(-.55); } }
   .falcon.glide .wing { animation-duration: .9s; }
 
+  .balloons { position: fixed; left: 0; top: 0; z-index: 20; pointer-events: none; display: none; will-change: transform; }
+  .balloons .body { position: absolute; }
+  .balloons svg { width: 100%; height: 100%; display: block; overflow: visible; animation: bob 2.4s ease-in-out infinite alternate; transform-origin: 50% 99%; filter: drop-shadow(0 8px 10px rgba(0,0,0,.3)); }
+  @keyframes bob { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+
   .offline { position: fixed; top: 1vh; right: 1vh; width: 10px; height: 10px; border-radius: 50%; background: #e55; z-index: 6; display: none; }
 </style>
 </head>
@@ -77,6 +82,16 @@
     <path d="M161 57 L177 64 L161 69 Z" fill="#e8b64c"/>
     <circle cx="155" cy="59" r="2.8" fill="#111"/>
     <g class="wing front"><path d="M98 68 C94 38 78 12 40 -2 C52 10 58 20 60 28 C50 24 42 24 34 26 C48 34 56 42 60 50 C52 50 44 52 40 56 C56 58 70 62 80 70 Z" fill="#8c6a4f"/></g>
+  </svg>
+</div></div>
+
+<div class="balloons" id="balloons"><div class="body">
+  <svg viewBox="0 0 120 160" aria-hidden="true">
+    <path d="M35 62 Q42 112 60 158 M60 52 Q56 106 60 158 M85 67 Q78 114 60 158" stroke="rgba(255,255,255,.85)" stroke-width="1.4" fill="none"/>
+    <ellipse cx="35" cy="38" rx="20" ry="24" fill="#ff5d8f"/><path d="M31 63 L39 63 L35 58 Z" fill="#ff5d8f"/>
+    <ellipse cx="85" cy="43" rx="20" ry="24" fill="#ffe066"/><path d="M81 68 L89 68 L85 63 Z" fill="#ffe066"/>
+    <ellipse cx="60" cy="28" rx="20" ry="24" fill="#4cc9f0"/><path d="M56 53 L64 53 L60 48 Z" fill="#4cc9f0"/>
+    <ellipse cx="28" cy="28" rx="5" ry="8" fill="#fff" opacity=".45"/><ellipse cx="53" cy="18" rx="5" ry="8" fill="#fff" opacity=".45"/><ellipse cx="78" cy="33" rx="5" ry="8" fill="#fff" opacity=".45"/>
   </svg>
 </div></div>
 
@@ -107,7 +122,7 @@
     theme = DW.THEMES[cfg.theme] ? cfg.theme : 'christmas';
     if (DW.THEME_OVERRIDE && DW.THEMES[DW.THEME_OVERRIDE]) theme = DW.THEME_OVERRIDE;
     var t = DW.theme(theme);
-    DW.applyVars(theme);
+    DW.applyVars(theme, cfg);
     document.getElementById('title').textContent = params.get('title') || cfg.title || t.title;
     document.getElementById('tagline').textContent = params.get('tagline') || cfg.tagline || t.tagline;
     fx.setMode(theme);
@@ -266,6 +281,7 @@
     el.style.transition = 'none';
     el.classList.add('popping');
 
+    if (theme === 'birthday') { await balloonDeliver(it, s, cx, cy, big, hurry); return; }
     if (theme === 'newyear') {
       setXY(it, cx - cell / 2, cy, 0.001);
       await fx.rocket(cx + (Math.random() - .5) * W * 0.3, cx, H / 2);
@@ -276,6 +292,7 @@
     el.getBoundingClientRect();
     el.style.transition = 'transform .7s cubic-bezier(.2,1.5,.4,1)';
     setXY(it, cx - cell / 2, cy, big / cell);
+    if (theme === 'wedding') fx.heartBurst(cx, cy + big / 2, big);
     await wait(hurry ? 1200 : 2400);
 
     if (theme === 'qatar') {
@@ -338,6 +355,57 @@
     });
   }
 
+  function animatePath(pts, dur, onStep, easing) {
+    return new Promise(function (res) {
+      var t0 = performance.now();
+      (function f(now) {
+        var t = Math.min(1, (now - t0) / dur), e = easing ? easing(t) : t;
+        onStep(cr(pts, e), e);
+        if (t < 1) requestAnimationFrame(f); else res();
+      })(t0);
+    });
+  }
+
+  // ---------------------------------------------------------------- balloons (birthday)
+  var balloons = document.getElementById('balloons'), bbody = balloons.querySelector('.body');
+  function sizeBalloons(w) {
+    var h = w * 160 / 120;
+    bbody.style.width = w + 'px'; bbody.style.height = h + 'px';
+    bbody.style.left = (-w / 2) + 'px'; bbody.style.top = (-h * 158 / 160) + 'px';
+    bbody.style.transformOrigin = (w / 2) + 'px ' + (h * 158 / 160) + 'px';
+  }
+  function setBalloons(p, k) {
+    balloons.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+    bbody.style.transform = 'scale(' + k + ')';
+  }
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+  async function balloonDeliver(it, s, cx, cy, big, hurry) {
+    var el = it.el, k0 = big / cell;
+    cy = Math.min(cy + H * 0.14, H - big - 20);   // leave room above for the balloons
+    sizeBalloons(big * 0.6);
+    balloons.style.display = 'block';
+    // Float up from below the screen to the middle.
+    var start = { x: cx + (Math.random() - .5) * W * 0.25, y: H + 30 };
+    await animatePath([start, { x: cx + (Math.random() - .5) * W * 0.1, y: (H + cy) / 2 }, { x: cx, y: cy }], hurry ? 1400 : 2400,
+      function (p) { setXY(it, p.x - cell / 2, p.y, k0); setBalloons(p, 1); }, easeOut);
+    await wait(hurry ? 900 : 1800);
+    // Drift to the slot, shrinking to wall size.
+    el.classList.remove('popping'); el.classList.add('carried');
+    var target = { x: s.x + cell / 2, y: s.y }, k = 1;
+    await animatePath([{ x: cx, y: cy }, { x: (cx + target.x) / 2 + (Math.random() - .5) * W * 0.15, y: Math.min(cy, target.y) - H * 0.08 }, target],
+      hurry ? 1200 : 2000, function (p, e) { var ks = k0 + (1 - k0) * e; k = ks / k0; setXY(it, p.x - cell / 2, p.y, ks); setBalloons(p, k); }, ease);
+    el.classList.remove('carried');
+    el.style.transition = 'transform .6s cubic-bezier(.2,1.6,.4,1)';
+    placeAt(it, s);
+    setTimeout(function () { el.style.transition = ''; }, 700);
+    // Let go of the balloons.
+    var drift = (Math.random() - .5) * 200;
+    await animatePath([target, { x: target.x + drift * 0.5, y: target.y - H * 0.35 }, { x: target.x + drift, y: -H * 0.3 }], 1700,
+      function (p) { setBalloons(p, k); }, function (t) { return t * t; });
+    balloons.style.display = 'none';
+  }
+
   async function falconCarry(it, s, cx, cy, big, hurry) {
     sizeFalcon();
     var fromLeft = Math.random() < .5, side = fromLeft ? -1 : 1;
@@ -390,6 +458,18 @@
         sparks.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 60 + Math.random() * 40, c: i % 3 ? col : col2, r: Math.random() * 2 + 1.2 });
       }
     }
+    // Sparkles that open out into a heart shape (wedding).
+    function heartBurst(x, y, size) {
+      var k = size / 40, cols = ['#f4c2c2', '#e8909c', '#d4af37', '#ffffff'];
+      for (var i = 0; i < 110; i++) {
+        var a = (i / 110) * 6.283;
+        var hx = 16 * Math.pow(Math.sin(a), 3);
+        var hy = -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a));
+        sparks.push({ x: x, y: y, vx: hx * k * 0.17, vy: hy * k * 0.17, life: 0, max: 80 + Math.random() * 20,
+          c: cols[i % cols.length], r: Math.random() * 1.8 + 1.4, nograv: true });
+      }
+    }
+
     function rocket(fromX, toX, toY) {
       return new Promise(function (res) {
         rockets.push({ x: fromX, y: innerHeight + 10, sx: fromX, tx: toX, ty: toY, t: 0, dur: 55, done: res });
@@ -413,7 +493,31 @@
           c.fillStyle = i % 3 ? 'rgba(246,231,204,.35)' : 'rgba(232,182,76,.5)';
           c.beginPath(); c.arc(f.x * cv.width, y, f.r * 0.8, 0, 6.28); c.fill();
         });
-      } else {
+      } else if (mode === 'birthday') {
+        flakes.forEach(function (f, i) {
+          f.y += f.s * 1.6; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
+          var x = (f.x + Math.sin(t / 1500 + f.d) * 0.015) * cv.width;
+          c.save(); c.translate(x, f.y * cv.height); c.rotate(t / 400 + f.d * 3);
+          c.globalAlpha = .85; c.fillStyle = COLORS[i % COLORS.length];
+          c.fillRect(-f.r * 1.6, -f.r * 0.8, f.r * 3.2, f.r * 1.6);
+          c.restore();
+        });
+      } else if (mode === 'wedding') {
+        stars.forEach(function (s, i) {
+          if (i % 3) return;
+          c.fillStyle = 'rgba(244,215,140,' + (0.25 + 0.5 * Math.abs(Math.sin(t / 1100 + s.p))) + ')';
+          c.beginPath(); c.arc(s.x * cv.width, s.y * cv.height, s.r, 0, 6.28); c.fill();
+        });
+        flakes.forEach(function (f, i) {
+          if (i % 2) return;
+          f.y += f.s * 0.7; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
+          var x = (f.x + Math.sin(t / 2200 + f.d) * 0.03) * cv.width;
+          c.save(); c.translate(x, f.y * cv.height); c.rotate(t / 1300 + f.d * 2);
+          c.globalAlpha = .8; c.fillStyle = i % 4 ? '#f4c2c2' : '#fff2f4';
+          c.beginPath(); c.ellipse(0, 0, f.r * 2.6, f.r * 1.4, 0, 0, 6.28); c.fill();
+          c.restore();
+        });
+      } else if (mode === 'newyear') {
         stars.forEach(function (s) {
           c.fillStyle = 'rgba(255,255,255,' + (0.35 + 0.45 * Math.abs(Math.sin(t / 900 + s.p))) + ')';
           c.beginPath(); c.arc(s.x * cv.width, s.y * cv.height * 0.85, s.r, 0, 6.28); c.fill();
@@ -434,7 +538,8 @@
         return true;
       });
       sparks = sparks.filter(function (p) {
-        p.life++; p.x += p.vx; p.y += p.vy; p.vx *= 0.97; p.vy = p.vy * 0.97 + 0.05;
+        p.life++; p.x += p.vx; p.y += p.vy;
+        if (p.nograv) { p.vx *= 0.94; p.vy *= 0.94; } else { p.vx *= 0.97; p.vy = p.vy * 0.97 + 0.05; }
         var a = 1 - p.life / p.max;
         if (a <= 0) return false;
         c.globalAlpha = a; c.fillStyle = p.c;
@@ -445,7 +550,7 @@
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
-    return { setMode: function (m) { mode = m; }, burst: burst, rocket: rocket };
+    return { setMode: function (m) { mode = m; }, burst: burst, rocket: rocket, heartBurst: heartBurst };
   })();
 
   // ---------------------------------------------------------------- data
@@ -475,7 +580,8 @@
       rows.slice().reverse().forEach(enqueue);
       updateCount();
       var c = await DW.loadEvent(db);
-      if (c.theme !== cfg.theme || c.title !== cfg.title || c.tagline !== cfg.tagline) applyTheme(c);
+      if (c.theme !== cfg.theme || c.title !== cfg.title || c.tagline !== cfg.tagline ||
+          JSON.stringify(c.backgrounds || {}) !== JSON.stringify(cfg.backgrounds || {})) applyTheme(c);
     } catch (e) {
       console.error(e);
       document.getElementById('offline').style.display = 'block';

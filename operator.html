@@ -35,6 +35,12 @@
   select { font: inherit; padding: 10px 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .small { font-size: 13px; margin: 8px 0 0; }
+  .bgrow { display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap; }
+  .bgpreview { width: 220px; aspect-ratio: 16 / 9; border-radius: 10px; border: 2px solid var(--line); background-size: cover; background-position: center; flex: 0 0 auto; }
+  .bgcontrols { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 10px; }
+  label.inline { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+  input[type=color] { width: 44px; height: 36px; padding: 2px; border-radius: 8px; border: 2px solid var(--line); background: var(--panel); }
+  .filebtn { font: inherit; padding: 10px 14px; border-radius: 10px; border: 2px solid var(--line); background: var(--panel); cursor: pointer; }
   @media (max-width: 760px) { .form { grid-template-columns: 1fr; } }
   .hidden { display: none !important; }
 </style>
@@ -71,6 +77,25 @@
       <button id="saveTheme" class="primary">Apply to the wall</button>
     </div>
     <p class="muted small">The display switches right away. Phones pick it up the next time they open the page.</p>
+  </div>
+  <div class="card hidden" id="bgCard">
+    <h2>Background for <span id="bgThemeName"></span></h2>
+    <div class="bgrow">
+      <div class="bgpreview" id="bgPreview"></div>
+      <div class="bgcontrols">
+        <div class="bar" style="margin:0">
+          <label class="inline">Top color <input type="color" id="c1"></label>
+          <label class="inline">Bottom color <input type="color" id="c2"></label>
+        </div>
+        <div class="bar" style="margin:0">
+          <label class="filebtn">Upload a picture<input type="file" id="bgFile" accept="image/*" hidden></label>
+          <button id="bgNoImage">Remove picture</button>
+          <button id="bgReset">Reset to theme default</button>
+          <button id="bgSave" class="primary">Save background</button>
+        </div>
+        <p class="muted small" style="margin:0">A picture covers the whole screen with a light dark layer so the drawings stay easy to see. Each theme keeps its own background.</p>
+      </div>
+    </div>
   </div>
   <div class="card hidden" id="codeCard">
     <h2>Change operator code</h2>
@@ -109,7 +134,7 @@
     if (res.error || !res.data) { msg('Wrong code'); try { sessionStorage.removeItem('dw-code'); } catch (e) {} return; }
     code = c;
     try { sessionStorage.setItem('dw-code', c); } catch (e) {}
-    $('login').classList.add('hidden'); $('tools').classList.remove('hidden'); $('themeCard').classList.remove('hidden'); $('codeCard').classList.remove('hidden');
+    $('login').classList.add('hidden'); $('tools').classList.remove('hidden'); $('themeCard').classList.remove('hidden'); $('codeCard').classList.remove('hidden'); $('bgCard').classList.remove('hidden');
     msg(''); load(); loadTheme();
   }
 
@@ -119,12 +144,78 @@
   function showDefaults() {
     var t = DW.theme($('theme').value);
     $('title').placeholder = t.title; $('tagline').placeholder = t.tagline;
+    showBg();
   }
   $('theme').onchange = showDefaults;
 
+  // ---- Background per theme
+  var bgs = {}, draft = {};
+  function showBg() {
+    var th = $('theme').value, v = DW.theme(th).vars;
+    draft = Object.assign({}, bgs[th] || {});
+    $('bgThemeName').textContent = DW.theme(th).label;
+    $('c1').value = draft.c1 || v.bg1; $('c2').value = draft.c2 || v.bg2;
+    paintPreview();
+  }
+  function paintPreview() {
+    var th = $('theme').value, v = DW.theme(th).vars;
+    var grad = 'radial-gradient(130% 90% at 50% 0%, ' + (draft.c1 || v.bg1) + ' 0%, ' + (draft.c2 || v.bg2) + ' 75%)';
+    $('bgPreview').style.backgroundImage = draft.image
+      ? 'linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url("' + DW.bgImageUrl(draft.image) + '")' : grad;
+  }
+  $('c1').oninput = function () { draft.c1 = $('c1').value; paintPreview(); };
+  $('c2').oninput = function () { draft.c2 = $('c2').value; paintPreview(); };
+  $('bgNoImage').onclick = function () { delete draft.image; paintPreview(); };
+  $('bgReset').onclick = function () { draft = {}; showBgDraft(); };
+  function showBgDraft() {
+    var v = DW.theme($('theme').value).vars;
+    $('c1').value = draft.c1 || v.bg1; $('c2').value = draft.c2 || v.bg2; paintPreview();
+  }
+
+  // Shrink big photos before upload: max 2560 px wide, JPEG.
+  function shrink(file) {
+    return new Promise(function (res, rej) {
+      var img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, 2560 / img.width, 1600 / img.height);
+        var cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(function (b) { b ? res(b) : rej(new Error('Could not read the picture')); }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { rej(new Error('Could not read the picture')); };
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  $('bgFile').onchange = async function () {
+    var f = $('bgFile').files[0];
+    if (!f) return;
+    msg('Uploading picture...');
+    try {
+      var blob = await shrink(f);
+      var path = DW.EVENT + '/' + $('theme').value + '-' + Date.now() + '.jpg';
+      var up = await db.storage.from('doodle-bg').upload(path, blob, { contentType: 'image/jpeg' });
+      if (up.error) throw up.error;
+      draft.image = path; paintPreview();
+      msg('Picture ready. Press Save background to use it.');
+    } catch (e) { console.error(e); msg('Could not upload the picture'); }
+    $('bgFile').value = '';
+  };
+  $('bgSave').onclick = async function () {
+    var th = $('theme').value, v = DW.theme(th).vars, bg = {};
+    if (draft.c1 && draft.c1.toLowerCase() !== v.bg1.toLowerCase()) bg.c1 = draft.c1;
+    if (draft.c2 && draft.c2.toLowerCase() !== v.bg2.toLowerCase()) bg.c2 = draft.c2;
+    if (draft.image) bg.image = draft.image;
+    var res = await db.rpc('doodle_set_background', { p_event: DW.EVENT, p_theme: th, p_bg: bg, p_code: code });
+    if (res.error || !res.data) { msg('Could not save the background'); return; }
+    if (Object.keys(bg).length) bgs[th] = bg; else delete bgs[th];
+    msg('Background saved for ' + DW.theme(th).label + '.');
+  };
+
   async function loadTheme() {
-    var res = await db.from(DW.EVENTS_TABLE).select('theme,title,tagline').eq('event', DW.EVENT).maybeSingle();
+    var res = await db.from(DW.EVENTS_TABLE).select('theme,title,tagline,backgrounds').eq('event', DW.EVENT).maybeSingle();
     var c = res.data || { theme: 'christmas' };
+    bgs = c.backgrounds || {};
     $('theme').value = c.theme; $('title').value = c.title || ''; $('tagline').value = c.tagline || '';
     showDefaults();
   }

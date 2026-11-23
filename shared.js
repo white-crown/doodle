@@ -34,6 +34,20 @@ function starPath(cx, cy, outer, inner, points) {
   return d + 'Z';
 }
 
+// Six round petals around a round middle. Every circle winds the same way, so they merge.
+function flowerPath() {
+  function circle(cx, cy, r) {
+    return 'M' + (cx + r).toFixed(1) + ' ' + cy.toFixed(1) + ' A' + r + ' ' + r + ' 0 1 1 ' + (cx - r).toFixed(1) + ' ' + cy.toFixed(1) +
+      ' A' + r + ' ' + r + ' 0 1 1 ' + (cx + r).toFixed(1) + ' ' + cy.toFixed(1) + ' Z ';
+  }
+  var d = '';
+  for (var i = 0; i < 6; i++) {
+    var a = -Math.PI / 2 + i * Math.PI / 3;
+    d += circle(50 + Math.cos(a) * 26, 50 + Math.sin(a) * 26, 20);
+  }
+  return d + circle(50, 50, 18);
+}
+
 // Qatar outline (geoBoundaries, simplified). 1000-tall version for the display map,
 // 100-box version for the phone shape.
 DW.QATAR_MAP = { w: 488, h: 1000, d: 'M268.8 0.0 L253.6 11.2 L242.3 6.1 L236.2 11.8 L234.2 7.1 L212.9 44.8 L199.9 52.4 L193.3 46.3 L185.4 53.8 L178.5 47.8 L175.3 58.6 L152.0 68.3 L155.5 85.6 L152.9 101.8 L145.1 101.6 L146.1 113.1 L136.4 117.9 L133.7 104.9 L127.9 105.0 L131.9 142.2 L110.1 192.7 L126.4 200.3 L124.9 226.5 L110.2 233.2 L112.1 220.4 L96.8 207.9 L83.9 226.2 L89.5 248.9 L76.2 266.6 L81.6 301.9 L95.2 317.1 L115.0 311.8 L119.7 299.8 L127.5 307.0 L114.2 322.2 L116.2 332.1 L109.4 334.7 L101.6 322.7 L91.0 332.1 L94.1 337.6 L83.8 365.7 L88.3 386.2 L74.7 368.9 L63.0 364.8 L65.3 352.6 L59.0 340.5 L69.5 312.3 L53.2 307.2 L51.6 299.5 L46.9 311.1 L55.7 321.6 L35.4 318.0 L23.4 331.0 L30.6 336.7 L41.7 332.8 L45.9 358.1 L36.5 373.2 L46.5 384.5 L50.1 394.7 L45.5 398.2 L53.2 410.5 L40.2 411.4 L26.2 372.6 L3.6 387.9 L10.6 397.1 L0.0 436.6 L6.9 453.0 L10.5 508.1 L5.4 524.6 L11.3 619.3 L32.4 650.8 L25.4 696.5 L54.5 734.5 L61.0 758.3 L55.9 784.6 L64.7 804.2 L60.4 822.6 L33.0 837.9 L98.7 958.1 L130.9 980.3 L186.6 1000.0 L295.3 979.4 L294.4 940.7 L303.6 923.8 L293.5 927.8 L286.2 923.3 L285.8 912.0 L282.6 918.1 L249.3 912.3 L252.1 898.1 L281.6 890.6 L284.3 896.1 L288.3 878.5 L297.9 902.5 L298.1 897.4 L305.7 901.4 L308.0 891.8 L318.1 889.5 L326.0 911.8 L320.5 921.0 L317.8 915.3 L317.6 926.1 L311.3 924.3 L314.4 949.2 L336.4 928.2 L333.0 922.4 L346.8 891.4 L346.2 902.5 L356.4 894.4 L358.1 899.9 L367.1 889.5 L366.4 876.1 L369.8 879.6 L389.8 834.1 L392.2 815.1 L387.8 820.4 L382.8 814.4 L394.0 812.5 L386.4 811.2 L391.6 798.6 L394.4 811.6 L395.9 785.2 L440.9 738.3 L456.3 705.5 L445.3 707.8 L449.1 700.7 L486.9 671.4 L454.7 688.5 L451.1 666.4 L455.6 665.2 L459.8 679.2 L484.2 666.9 L466.3 661.8 L469.6 673.2 L463.8 664.3 L469.0 673.5 L461.8 674.2 L460.2 644.1 L466.7 632.3 L460.9 586.0 L469.1 565.1 L455.0 543.8 L464.6 533.6 L471.6 536.8 L460.0 507.6 L452.9 515.9 L447.6 512.6 L448.1 519.1 L443.6 508.9 L429.3 516.5 L432.9 503.8 L422.1 513.7 L412.2 509.2 L424.4 493.8 L413.7 487.5 L419.7 472.0 L404.0 467.4 L423.9 458.7 L415.1 453.5 L422.6 451.6 L421.5 444.3 L406.3 438.7 L409.5 434.2 L410.8 441.5 L418.2 443.0 L412.7 437.1 L417.7 434.3 L422.4 443.3 L420.6 424.5 L409.8 416.7 L422.7 424.2 L425.4 420.0 L419.2 421.3 L404.7 407.3 L421.2 403.4 L397.2 405.1 L387.8 382.2 L400.3 367.3 L397.9 330.8 L422.8 321.2 L430.1 308.3 L429.9 294.0 L418.7 289.2 L423.3 281.1 L416.2 283.6 L404.5 276.3 L431.2 268.2 L435.1 280.0 L426.7 283.3 L437.6 283.2 L439.2 288.8 L445.5 285.9 L451.5 266.7 L448.4 250.8 L442.7 248.2 L439.3 256.5 L421.8 242.5 L434.8 246.3 L440.1 228.8 L433.2 230.5 L448.6 217.8 L453.3 226.4 L446.3 176.5 L488.4 154.2 L483.5 147.8 L488.1 154.1 L480.4 151.9 L446.4 176.0 L441.7 159.2 L435.6 159.6 L441.7 158.6 L435.6 158.5 L474.6 151.2 L465.4 147.0 L467.1 151.0 L447.9 157.3 L450.0 148.1 L467.3 139.0 L474.9 143.5 L463.6 138.2 L448.4 144.0 L458.6 138.8 L449.4 137.7 L453.6 133.2 L465.8 136.0 L456.3 130.8 L469.1 128.7 L486.3 137.7 L467.2 128.0 L453.5 130.1 L439.7 142.2 L428.9 137.2 L428.3 129.6 L422.0 134.4 L428.4 128.1 L421.9 134.3 L395.0 118.5 L369.8 124.8 L350.4 114.8 L347.5 87.8 L325.5 62.9 L326.1 33.1 L268.8 0.0 Z' };
@@ -55,6 +69,18 @@ var SHAPES = {
 
   face: { label: 'Face',
     d: 'M50 3 C70 3 84 14 85 38 C88 38 90 41 90 46 L90 56 C90 62 88 65 84 66 C82 72 79 76 74 82 C66 91 58 97 50 97 C42 97 34 91 26 82 C21 76 18 72 16 66 C12 65 10 62 10 56 L10 46 C10 41 12 39 15 38 C16 14 30 3 50 3 Z' },
+
+  cake: { label: 'Cake',
+    d: 'M47 6 C47 2 53 2 53 6 C53 9 51 11 50 12 C49 11 47 9 47 6 Z M47 14 L53 14 L53 34 L47 34 Z M14 34 L86 34 C90 34 92 36 92 40 L92 90 L8 90 L8 40 C8 36 10 34 14 34 Z M4 90 L96 90 L96 96 L4 96 Z' },
+  gift: { label: 'Gift',
+    d: 'M8 40 L92 40 L92 56 L86 56 L86 94 L14 94 L14 56 L8 56 Z M50 40 C40 22 22 18 24 30 C25 36 38 40 50 40 Z M50 40 C60 22 78 18 76 30 C75 36 62 40 50 40 Z' },
+  ring: { label: 'Ring',
+    d: 'M84 62 A34 34 0 1 1 16 62 A34 34 0 1 1 84 62 Z M74 62 A24 24 0 1 0 26 62 A24 24 0 1 0 74 62 Z M36 16 L43 6 L57 6 L64 16 L50 28 Z' },
+  dove: { label: 'Dove',
+    d: 'M10 52 C20 50 30 52 38 56 C36 40 30 26 20 14 C36 18 50 32 56 50 C62 44 70 40 78 40 C84 40 88 44 90 46 L98 48 L90 52 C88 60 80 68 68 72 C58 76 46 76 36 72 L18 80 C22 72 26 68 28 64 C22 60 16 56 10 52 Z' },
+  flower: { label: 'Flower', d: flowerPath() },
+  weddingcake: { label: 'Wedding cake',
+    d: 'M36 14 L64 14 L64 36 L76 36 L76 62 L88 62 L88 92 L12 92 L12 62 L24 62 L24 36 L36 36 Z' },
 
   qatar: { label: 'Qatar', d: QATAR_D100 },
   falcon: { label: 'Falcon',
@@ -110,6 +136,47 @@ DW.THEMES = {
     vars: { bg1: '#1f2a66', bg2: '#05060f', accent: '#e8b64c', accentInk: '#1b1405', soft: '#d6dcf5' },
     max: 40,
   },
+  birthday: {
+    label: 'Birthday',
+    title: 'Happy Birthday!',
+    tagline: 'Scan the code, draw a birthday wish, and watch the balloons bring it up',
+    shapes: ['cake', 'balloon', 'gift', 'hat', 'star', 'heart', 'face'],
+    palette: ['#ff5d8f', '#ff99b6', '#ffb347', '#ffe066', '#b5e853', '#4caf50', '#4cc9f0', '#2e5fc8',
+              '#8a5cd6', '#c77dff', '#e5484d', '#8b5a3c', '#ffffff', '#c9d1d9', '#9aa3ad', '#23201c'],
+    vars: { bg1: '#7b3fd1', bg2: '#2a0f5c', accent: '#ff5d8f', accentInk: '#ffffff', soft: '#ead9ff' },
+    max: 40,
+  },
+  wedding: {
+    label: 'Wedding',
+    title: 'Happily Ever After',
+    tagline: 'Scan the code and draw a wish for the couple',
+    shapes: ['heart', 'ring', 'dove', 'flower', 'weddingcake', 'glass', 'face'],
+    palette: ['#f4c2c2', '#e8909c', '#c45b74', '#fff8ee', '#f3e5c8', '#d4af37', '#b8935a', '#a8c3a0',
+              '#5f8a6a', '#a7c7e7', '#5b7fa6', '#c8b6e2', '#ffffff', '#c9c9c9', '#7a6e66', '#2b2420'],
+    vars: { bg1: '#5a3a4a', bg2: '#1e1418', accent: '#d4af37', accentInk: '#1e1418', soft: '#f3e5e8' },
+    max: 40,
+  },
+};
+
+// Operator's custom background for a theme: { c1, c2, image } (each optional).
+DW.backgroundFor = function (cfg, theme) {
+  var all = (cfg && cfg.backgrounds) || {};
+  return all[theme] || {};
+};
+DW.bgImageUrl = function (path) {
+  return DW.SUPABASE_URL + '/storage/v1/object/public/doodle-bg/' + path;
+};
+DW.applyBackground = function (theme, bg) {
+  var v = DW.theme(theme).vars, s = document.documentElement.style, b = document.body.style;
+  bg = bg || {};
+  s.setProperty('--bg1', bg.c1 || v.bg1);
+  s.setProperty('--bg2', bg.c2 || v.bg2);
+  if (bg.image) {
+    b.backgroundImage = 'linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url("' + DW.bgImageUrl(bg.image) + '")';
+    b.backgroundSize = 'cover'; b.backgroundPosition = 'center';
+  } else {
+    b.backgroundImage = ''; b.backgroundSize = ''; b.backgroundPosition = '';
+  }
 };
 
 DW.theme = function (name) { return DW.THEMES[name] || DW.THEMES.christmas; };
@@ -118,18 +185,18 @@ DW.shapesFor = function (theme) { return DW.theme(theme).shapes.map(DW.shape); }
 
 // Event settings picked by the operator: { theme, title, tagline }.
 DW.loadEvent = async function (db) {
-  var cfg = { theme: 'christmas', title: null, tagline: null };
+  var cfg = { theme: 'christmas', title: null, tagline: null, backgrounds: {} };
   try {
-    var res = await db.from(DW.EVENTS_TABLE).select('theme,title,tagline').eq('event', DW.EVENT).maybeSingle();
+    var res = await db.from(DW.EVENTS_TABLE).select('theme,title,tagline,backgrounds').eq('event', DW.EVENT).maybeSingle();
     if (res.data) cfg = res.data;
   } catch (e) { console.error(e); }
   if (DW.THEME_OVERRIDE && DW.THEMES[DW.THEME_OVERRIDE]) cfg.theme = DW.THEME_OVERRIDE;
   return cfg;
 };
 
-DW.applyVars = function (theme) {
+DW.applyVars = function (theme, cfg) {
   var v = DW.theme(theme).vars, s = document.documentElement.style;
-  s.setProperty('--bg1', v.bg1); s.setProperty('--bg2', v.bg2);
+  DW.applyBackground(theme, DW.backgroundFor(cfg, theme));
   s.setProperty('--accent', v.accent); s.setProperty('--accent-ink', v.accentInk); s.setProperty('--soft', v.soft);
   document.body.dataset.theme = DW.THEMES[theme] ? theme : 'christmas';
 };
