@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doodle Wall Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg1: #1d4a3b; --bg2: #0a1f19; --text: #fdf8ef; --soft: #cfe3d8; --gold: #e8b64c; --accent: #c8323b; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: radial-gradient(130% 90% at 50% 0%, var(--bg1) 0%, var(--bg2) 75%); color: var(--text); font-family: 'Fredoka', system-ui, sans-serif; cursor: none; }
+  #snow { position: fixed; inset: 0; pointer-events: none; }
+  #wall { position: fixed; inset: 0; }
+
+  .title { position: fixed; top: 2.2vh; left: 0; right: 0; text-align: center; z-index: 5; pointer-events: none; }
+  .title h1 { margin: 0; font-size: clamp(28px, 4.4vh, 64px); font-weight: 700; text-shadow: 0 4px 24px rgba(0,0,0,.4); }
+  .title p { margin: .3vh 0 0; font-size: clamp(14px, 2vh, 28px); color: var(--soft); }
+
+  .join { position: fixed; right: 2vh; bottom: 2vh; z-index: 5; background: var(--text); color: #23201c; border-radius: 2vh; padding: 1.4vh; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+  .join #qr { width: 17vh; height: 17vh; }
+  .join #qr img, .join #qr canvas { width: 100% !important; height: 100% !important; }
+  .join b { display: block; margin-top: .8vh; font-size: 2vh; }
+  .count { position: fixed; left: 2vh; bottom: 2vh; z-index: 5; color: var(--soft); font-size: 2vh; }
+
+  .item { position: absolute; left: 0; top: 0; will-change: transform; transition: transform 1.1s cubic-bezier(.5,0,.2,1), opacity .8s ease; z-index: 1; }
+  .item .sway { animation: sway 5s ease-in-out infinite alternate; transform-origin: 50% 0; }
+  .item img { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+  .item .who { text-align: center; font-size: 12px; color: var(--soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.popping { z-index: 10; }
+  .item.popping .sway { animation: none; }
+  .item .banner { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); white-space: nowrap; background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 9px; font-weight: 600; opacity: 0; transition: opacity .3s; }
+  .item.popping .banner { opacity: 1; }
+  .item.leaving { opacity: 0; }
+  @keyframes sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+  @keyframes popin { 0% { transform: scale(0) rotate(-20deg); } 70% { transform: scale(1.12) rotate(4deg); } 100% { transform: scale(1) rotate(0); } }
+  .pop-anim { animation: popin .7s cubic-bezier(.2,1.4,.4,1) both; }
+
+  .offline { position: fixed; top: 1vh; right: 1vh; width: 10px; height: 10px; border-radius: 50%; background: #e55; z-index: 6; display: none; }
+</style>
+</head>
+<body>
+<canvas id="snow"></canvas>
+<div id="wall"></div>
+<div class="title"><h1 id="title">Merry Christmas!</h1><p id="tagline">Scan the code, draw your own, and watch it appear here</p></div>
+<div class="join"><div id="qr"></div><b>Scan to draw</b></div>
+<div class="count" id="count"></div>
+<div class="offline" id="offline"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function () {
+  var db = DW.client();
+  var params = new URLSearchParams(location.search);
+  if (params.get('title')) document.getElementById('title').textContent = params.get('title');
+  if (params.get('tagline')) document.getElementById('tagline').textContent = params.get('tagline');
+
+  // QR points at the phone page. ?join=<url> overrides it (needed when testing on localhost).
+  var joinUrl = params.get('join') || new URL('index.html?e=' + encodeURIComponent(DW.EVENT), location.href).href;
+  new QRCode(document.getElementById('qr'), { text: joinUrl, width: 400, height: 400, correctLevel: QRCode.CorrectLevel.M });
+
+  var wall = document.getElementById('wall');
+  var items = new Map();      // id -> { el, slot, row }
+  var slots = [], cell = 100;
+  var queue = [], busy = false;
+
+  // ---- Layout: a jittered grid that avoids the title and the QR card ----
+  function layout() {
+    var W = innerWidth, H = innerHeight;
+    var top = H * 0.14, bottom = H * 0.05 + 24;   // room for the name labels and the counter
+    var usable = H - top - bottom;
+    cell = Math.sqrt((W * usable) / (DW.MAX_ON_WALL * 1.15));
+    var cols = Math.max(1, Math.floor(W / cell)), rows = Math.max(1, Math.floor(usable / cell));
+    var gx = W / cols, gy = usable / rows;
+    var qr = document.querySelector('.join').getBoundingClientRect();
+    var old = slots;
+    slots = [];
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var x = c * gx + (gx - cell) / 2 + (Math.random() - .5) * gx * 0.18;
+        var y = top + r * gy + (gy - cell) / 2 + (Math.random() - .5) * gy * 0.18;
+        var overQr = x + cell > qr.left - 10 && y + cell > qr.top - 10;
+        if (!overQr) slots.push({ x: x, y: y, rot: (Math.random() - .5) * 16, used: null });
+      }
+    }
+    // Put existing drawings back into the new slots, newest first.
+    if (old.length) {
+      var list = Array.from(items.values()).sort(function (a, b) { return b.row.created_at < a.row.created_at ? -1 : 1; });
+      list.forEach(function (it) {
+        var s = freeSlot();
+        if (!s) { removeItem(it.row.id, true); return; }
+        s.used = it.row.id; it.slot = s; placeAt(it, s);
+      });
+    }
+  }
+
+  function freeSlot() {
+    var free = slots.filter(function (s) { return !s.used; });
+    return free.length ? free[Math.floor(Math.random() * free.length)] : null;
+  }
+
+  function placeAt(it, s) {
+    it.el.style.width = cell + 'px';
+    it.el.style.transform = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + s.rot + 'deg)';
+  }
+
+  function makeEl(row) {
+    var el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = '<div class="sway" style="animation-delay:-' + (Math.random() * 5).toFixed(2) + 's">' +
+      '<span class="banner"></span><img alt=""><div class="who"></div></div>';
+    el.querySelector('img').src = DW.imageUrl(row.image_path);
+    if (row.name) {
+      el.querySelector('.who').textContent = row.name;
+      el.querySelector('.banner').textContent = 'From ' + row.name;
+    } else {
+      el.querySelector('.banner').textContent = 'New drawing!';
+    }
+    wall.appendChild(el);
+    return el;
+  }
+
+  function oldest() {
+    var o = null;
+    items.forEach(function (it) { if (!o || it.row.created_at < o.row.created_at) o = it; });
+    return o;
+  }
+
+  function removeItem(id, instant) {
+    var it = items.get(id);
+    if (!it) return;
+    items.delete(id);
+    if (it.slot) it.slot.used = null;
+    if (instant) { it.el.remove(); return; }
+    it.el.classList.add('leaving');
+    setTimeout(function () { it.el.remove(); }, 900);
+  }
+
+  // Quiet add, used on first load.
+  function addQuiet(row, delay) {
+    var s = freeSlot();
+    if (!s) return;
+    var it = { row: row, el: makeEl(row), slot: s };
+    s.used = row.id; items.set(row.id, it);
+    placeAt(it, s);
+    it.el.style.opacity = 0;
+    setTimeout(function () { it.el.style.opacity = 1; it.el.querySelector('img').classList.add('pop-anim'); }, delay);
+  }
+
+  // Big pop in the middle, then fly to a slot.
+  function popNew(row) {
+    return new Promise(function (done) {
+      if (items.has(row.id)) return done();
+      var s = freeSlot();
+      if (!s) { var o = oldest(); if (o) { removeItem(o.row.id); s = freeSlot(); } }
+      if (!s) return done();
+      var it = { row: row, el: makeEl(row), slot: s };
+      s.used = row.id; items.set(row.id, it);
+      updateCount();
+
+      var big = Math.min(innerHeight * 0.42, innerWidth * 0.35);
+      var cx = innerWidth / 2 - cell / 2, cy = innerHeight / 2 - cell / 2;
+      var el = it.el;
+      el.classList.add('popping');
+      el.style.width = cell + 'px';
+      el.style.transition = 'none';
+      el.style.transform = 'translate(' + cx + 'px,' + cy + 'px) scale(0)';
+      el.getBoundingClientRect();
+      var img = el.querySelector('img');
+      var go = function () {
+        el.style.transition = 'transform .7s cubic-bezier(.2,1.5,.4,1)';
+        el.style.transform = 'translate(' + cx + 'px,' + cy + 'px) scale(' + (big / cell) + ')';
+        setTimeout(function () {
+          el.style.transition = '';
+          el.classList.remove('popping');
+          placeAt(it, s);
+          setTimeout(done, 700);
+        }, 2600);
+      };
+      if (img.complete) go(); else { img.onload = go; img.onerror = go; }
+    });
+  }
+
+  function enqueue(row) {
+    if (!row || row.hidden || row.event !== DW.EVENT || items.has(row.id)) return;
+    if (queue.some(function (q) { return q.id === row.id; })) return;
+    queue.push(row); pump();
+  }
+  async function pump() {
+    if (busy) return;
+    busy = true;
+    while (queue.length) await popNew(queue.shift());
+    busy = false;
+  }
+
+  var total = 0;
+  function updateCount() {
+    document.getElementById('count').textContent = total ? total + (total === 1 ? ' drawing' : ' drawings') : '';
+  }
+
+  async function refreshCount() {
+    var res = await db.from(DW.TABLE).select('id', { count: 'exact', head: true }).eq('event', DW.EVENT);
+    if (!res.error) { total = res.count || 0; updateCount(); }
+  }
+
+  async function fetchRows() {
+    var res = await db.from(DW.TABLE).select('id,created_at,event,name,shape,image_path,hidden', { count: 'exact' })
+      .eq('event', DW.EVENT).order('created_at', { ascending: false }).limit(DW.MAX_ON_WALL);
+    if (res.error) throw res.error;
+    total = res.count || res.data.length;
+    return res.data;
+  }
+
+  // Poll as a safety net: catches anything realtime missed and removes hidden drawings.
+  async function sync() {
+    try {
+      var rows = await fetchRows();
+      document.getElementById('offline').style.display = 'none';
+      var ids = new Set(rows.map(function (r) { return r.id; }));
+      items.forEach(function (it, id) { if (!ids.has(id)) removeItem(id); });
+      rows.slice().reverse().forEach(enqueue);
+      updateCount();
+    } catch (e) {
+      console.error(e);
+      document.getElementById('offline').style.display = 'block';
+    }
+  }
+
+  async function init() {
+    layout();
+    try {
+      var rows = await fetchRows();
+      rows.forEach(function (r, i) { addQuiet(r, 80 * i); });
+      updateCount();
+    } catch (e) { console.error(e); document.getElementById('offline').style.display = 'block'; }
+
+    db.channel('doodle-' + DW.EVENT)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: DW.TABLE, filter: 'event=eq.' + DW.EVENT },
+        function (payload) { enqueue(payload.new); refreshCount(); })
+      .subscribe();
+    setInterval(sync, 15000);
+  }
+
+  var rt;
+  addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(layout, 300); });
+
+  // ---- Snow ----
+  var snow = document.getElementById('snow'), sctx = snow.getContext('2d'), flakes = [];
+  function sizeSnow() { snow.width = innerWidth; snow.height = innerHeight; }
+  sizeSnow(); addEventListener('resize', sizeSnow);
+  for (var i = 0; i < 140; i++) flakes.push({ x: Math.random(), y: Math.random(), r: Math.random() * 2.4 + .6, s: Math.random() * .0012 + .0004, d: Math.random() * 6.28 });
+  (function tick(t) {
+    sctx.clearRect(0, 0, snow.width, snow.height);
+    sctx.fillStyle = 'rgba(255,255,255,.75)';
+    flakes.forEach(function (f) {
+      f.y += f.s; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
+      var x = (f.x + Math.sin(t / 2000 + f.d) * 0.01) * snow.width;
+      sctx.beginPath(); sctx.arc(x, f.y * snow.height, f.r, 0, 6.28); sctx.fill();
+    });
+    requestAnimationFrame(tick);
+  })(0);
+
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Doodle Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f2a22; --panel: #fdf8ef; --ink: #23201c; --muted: #6f675c;
+    --accent: #c8323b; --accent-ink: #fff; --gold: #e8b64c; --line: #e6dccb;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(120% 80% at 50% 0%, #1d4a3b 0%, var(--bg) 70%);
+    color: var(--ink); font-family: 'Fredoka', system-ui, sans-serif;
+    display: flex; justify-content: center; overscroll-behavior: none;
+  }
+  .app { width: 100%; max-width: 520px; min-height: 100%; padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  header { text-align: center; color: #fdf8ef; }
+  header h1 { margin: 4px 0 0; font-size: 26px; font-weight: 700; letter-spacing: .3px; }
+  header p { margin: 2px 0 0; color: #cfe3d8; font-size: 15px; }
+  .card { background: var(--panel); border-radius: 22px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .hidden { display: none !important; }
+
+  /* Step 1: pick a shape */
+  .shapes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .shape-btn {
+    border: 2px solid var(--line); background: #fff; border-radius: 16px; padding: 10px 6px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; font: inherit; color: var(--ink); cursor: pointer;
+  }
+  .shape-btn svg { width: 64px; height: 64px; }
+  .shape-btn:active { transform: scale(.96); border-color: var(--accent); }
+
+  /* Step 2: draw */
+  .stage { position: relative; width: 100%; max-width: 56vh; margin: 0 auto; aspect-ratio: 1; background: repeating-conic-gradient(#f1eadc 0 25%, #f8f3ea 0 50%) 0 0/24px 24px; border-radius: 16px; overflow: hidden; }
+  canvas#pad { width: 100%; height: 100%; display: block; touch-action: none; }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .colors { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; }
+  .swatch { aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); cursor: pointer; padding: 0; }
+  .swatch.on { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .tools { display: flex; gap: 6px; justify-content: space-between; }
+  .tool {
+    flex: 1; min-height: 44px; border-radius: 12px; border: 2px solid var(--line); background: #fff; font: inherit; font-size: 14px;
+    color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 0 4px;
+  }
+  .tool.on { border-color: var(--ink); background: #f3ecdf; }
+  .size-dot { display: inline-block; border-radius: 50%; background: var(--ink); }
+  input[type=text] {
+    width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--line); background: #fff; color: var(--ink);
+  }
+  .actions { display: flex; gap: 8px; }
+  .btn { flex: 1; min-height: 50px; border-radius: 14px; border: 0; font: inherit; font-size: 18px; font-weight: 600; cursor: pointer; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { background: transparent; color: var(--muted); border: 2px solid var(--line); flex: 0 0 auto; padding: 0 16px; }
+  .btn:disabled { opacity: .6; }
+  .err { color: var(--accent); font-size: 14px; text-align: center; min-height: 1em; margin: 0; }
+
+  /* Step 3: sent */
+  .done { text-align: center; padding: 28px 18px; }
+  .done img { width: 60%; max-width: 240px; animation: pop .6s cubic-bezier(.2,1.6,.4,1) both; }
+  .done h2 { margin: 12px 0 4px; font-size: 26px; }
+  .done p { margin: 0 0 18px; color: var(--muted); }
+  @keyframes pop { from { transform: scale(.2) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Doodle Wall</h1>
+    <p id="subtitle">Pick a shape and make it yours</p>
+  </header>
+
+  <!-- Step 1 -->
+  <section id="step-pick" class="card">
+    <div class="shapes" id="shapes"></div>
+  </section>
+
+  <!-- Step 2 -->
+  <section id="step-draw" class="card hidden">
+    <div class="stage"><canvas id="pad" width="600" height="600"></canvas></div>
+    <div style="height:12px"></div>
+    <div class="colors" id="colors"></div>
+    <div style="height:10px"></div>
+    <div class="tools">
+      <button class="tool on" data-tool="brush" data-size="8"><span class="size-dot" style="width:6px;height:6px"></span></button>
+      <button class="tool" data-tool="brush" data-size="18"><span class="size-dot" style="width:11px;height:11px"></span></button>
+      <button class="tool" data-tool="brush" data-size="36"><span class="size-dot" style="width:17px;height:17px"></span></button>
+      <button class="tool" data-tool="fill">Fill</button>
+      <button class="tool" data-tool="eraser">Erase</button>
+      <button class="tool" id="undo">Undo</button>
+    </div>
+    <div style="height:12px"></div>
+    <input type="text" id="name" maxlength="30" placeholder="Your name (optional)" autocomplete="off">
+    <div style="height:12px"></div>
+    <div class="actions">
+      <button class="btn ghost" id="back">Back</button>
+      <button class="btn primary" id="send">Send to the wall</button>
+    </div>
+    <p class="err" id="err"></p>
+  </section>
+
+  <!-- Step 3 -->
+  <section id="step-done" class="card done hidden">
+    <img id="done-img" alt="Your drawing">
+    <h2>It is on the wall!</h2>
+    <p>Look up at the big screen</p>
+    <button class="btn primary" id="again">Draw another</button>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function () {
+  var db = DW.client();
+  var SIZE = 600, PAD = 26, SCALE = (SIZE - PAD * 2) / 100;
+  var COLORS = ['#c8323b', '#8e1b24', '#f07f2e', '#e8b64c', '#ffe066', '#7ccf6b', '#2f8f4e', '#174d34',
+                '#6ec3f0', '#2e5fc8', '#8a5cd6', '#f28cb8', '#8b5a3c', '#ffffff', '#9aa3ad', '#23201c'];
+
+  var pad = document.getElementById('pad'), ctx = pad.getContext('2d');
+  var paint = document.createElement('canvas'); paint.width = paint.height = SIZE;
+  var pctx;
+  var shape = null, shapePath = null;
+  var color = COLORS[0], tool = 'brush', size = 8;
+  var history = [], drawing = false, last = null, dirty = false;
+
+  function $(id) { return document.getElementById(id); }
+  function show(step) {
+    ['step-pick', 'step-draw', 'step-done'].forEach(function (s) { $(s).classList.toggle('hidden', s !== step); });
+    $('subtitle').textContent = step === 'step-pick' ? 'Pick a shape and make it yours'
+      : step === 'step-draw' ? 'Color it, draw on it, then send it' : 'Thank you!';
+  }
+
+  // Shape buttons
+  DW.SHAPES.forEach(function (s) {
+    var b = document.createElement('button');
+    b.className = 'shape-btn';
+    b.innerHTML = '<svg viewBox="-4 -4 108 108"><path d="' + s.d + '" fill="#fff" stroke="#23201c" stroke-width="4" stroke-linejoin="round"/></svg><span>' + s.label + '</span>';
+    b.onclick = function () { start(s); };
+    $('shapes').appendChild(b);
+  });
+
+  // Colors
+  COLORS.forEach(function (c, i) {
+    var b = document.createElement('button');
+    b.className = 'swatch' + (i === 0 ? ' on' : '');
+    b.style.background = c;
+    b.setAttribute('aria-label', c);
+    b.onclick = function () {
+      color = c;
+      document.querySelectorAll('.swatch').forEach(function (x) { x.classList.toggle('on', x === b); });
+      if (tool === 'eraser') pickTool(document.querySelector('.tool[data-tool=brush]'));
+    };
+    $('colors').appendChild(b);
+  });
+
+  function pickTool(btn) {
+    tool = btn.dataset.tool;
+    if (btn.dataset.size) size = +btn.dataset.size;
+    document.querySelectorAll('.tool[data-tool]').forEach(function (x) { x.classList.toggle('on', x === btn); });
+  }
+  document.querySelectorAll('.tool[data-tool]').forEach(function (b) { b.onclick = function () { pickTool(b); }; });
+
+  function start(s) {
+    shape = s;
+    shapePath = new Path2D();
+    shapePath.addPath(new Path2D(s.d), new DOMMatrix([SCALE, 0, 0, SCALE, PAD, PAD]));
+    paint.width = SIZE;               // resets the canvas and its clip
+    pctx = paint.getContext('2d');
+    pctx.clip(shapePath);             // everything painted stays inside the shape
+    pctx.lineCap = 'round'; pctx.lineJoin = 'round';
+    history = []; dirty = false;
+    $('err').textContent = '';
+    render();
+    show('step-draw');
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill(shapePath);
+    ctx.drawImage(paint, 0, 0);
+    ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.strokeStyle = '#23201c';
+    ctx.stroke(shapePath);
+  }
+
+  function snapshot() {
+    history.push(pctx.getImageData(0, 0, SIZE, SIZE));
+    if (history.length > 25) history.shift();
+  }
+
+  function pos(e) {
+    var r = pad.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * SIZE / r.width, y: (e.clientY - r.top) * SIZE / r.height };
+  }
+
+  function stroke(a, b) {
+    pctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+    pctx.strokeStyle = color;
+    pctx.lineWidth = tool === 'eraser' ? Math.max(size, 24) : size;
+    pctx.beginPath(); pctx.moveTo(a.x, a.y); pctx.lineTo(b.x + 0.01, b.y); pctx.stroke();
+  }
+
+  pad.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    snapshot(); dirty = true;
+    var p = pos(e);
+    if (tool === 'fill') {
+      // Fill goes behind what is already drawn, so lines stay on top.
+      pctx.globalCompositeOperation = 'destination-over';
+      pctx.fillStyle = color; pctx.fillRect(0, 0, SIZE, SIZE);
+      pctx.globalCompositeOperation = 'source-over';
+      render(); return;
+    }
+    try { pad.setPointerCapture(e.pointerId); } catch (err) {}
+    drawing = true; last = p; stroke(p, p); render();
+  });
+  pad.addEventListener('pointermove', function (e) {
+    if (!drawing) return;
+    var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    if (!evs.length) evs = [e];
+    evs.forEach(function (ev) { var p = pos(ev); stroke(last, p); last = p; });
+    render();
+  });
+  function end() { drawing = false; last = null; }
+  pad.addEventListener('pointerup', end);
+  pad.addEventListener('pointercancel', end);
+
+  $('undo').onclick = function () {
+    if (!history.length) return;
+    pctx.putImageData(history.pop(), 0, 0);
+    render();
+  };
+  $('back').onclick = function () { show('step-pick'); };
+  $('again').onclick = function () { show('step-pick'); };
+
+  $('send').onclick = async function () {
+    var btn = $('send');
+    $('err').textContent = '';
+    if (!dirty) { $('err').textContent = 'Add some color first'; return; }
+    btn.disabled = true; btn.textContent = 'Sending...';
+    try {
+      var blob = await new Promise(function (res) { pad.toBlob(res, 'image/png'); });
+      var path = DW.EVENT + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.png';
+      var up = await db.storage.from(DW.BUCKET).upload(path, blob, { contentType: 'image/png' });
+      if (up.error) throw up.error;
+      var name = $('name').value.trim().slice(0, 30) || null;
+      var ins = await db.from(DW.TABLE).insert({ event: DW.EVENT, name: name, shape: shape.id, image_path: path });
+      if (ins.error) throw ins.error;
+      $('done-img').src = URL.createObjectURL(blob);
+      show('step-done');
+    } catch (err) {
+      console.error(err);
+      $('err').textContent = 'Could not send, please try again';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send to the wall';
+    }
+  };
+})();
+</script>
+</body>
+</html>

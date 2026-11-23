@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doodle Wall Operator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #f6f1e7; --panel: #fff; --ink: #23201c; --muted: #6f675c; --line: #e6dccb; --accent: #c8323b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14110e; --panel: #221e1a; --ink: #f3ede3; --muted: #a89e90; --line: #3a332c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Fredoka', system-ui, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { margin: 0 0 4px; font-size: 24px; }
+  .muted { color: var(--muted); }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
+  input { font: inherit; padding: 10px 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); min-width: 0; }
+  button { font: inherit; padding: 10px 14px; border-radius: 10px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  button.danger { border-color: var(--accent); color: var(--accent); }
+  button.danger.armed { background: var(--accent); color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .tile img { width: 100%; aspect-ratio: 1; object-fit: contain; background: repeating-conic-gradient(#0000000d 0 25%, #0000 0 50%) 0 0/16px 16px; border-radius: 8px; }
+  .tile .meta { font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
+  .tile .meta span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile button { padding: 6px; font-size: 13px; }
+  #msg { min-height: 1.2em; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Doodle Wall operator</h1>
+  <div class="muted">Event <b id="ev"></b> · <span id="n">0</span> on the wall</div>
+
+  <div class="bar" id="login">
+    <input id="code" type="password" placeholder="Operator code" autocomplete="off">
+    <button id="enter">Unlock</button>
+  </div>
+
+  <div class="bar hidden" id="tools">
+    <button id="refresh">Refresh</button>
+    <button id="zip">Download all (zip)</button>
+    <button id="clear" class="danger">Clear the wall</button>
+    <a id="openDisplay" target="_blank">Open display</a>
+    <a id="openPhone" target="_blank">Open phone page</a>
+  </div>
+  <p id="msg" class="muted"></p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="shared.js"></script>
+<script>
+(function () {
+  var db = DW.client();
+  var code = '';
+  var rows = [];
+  function $(id) { return document.getElementById(id); }
+  function msg(t) { $('msg').textContent = t || ''; }
+  $('ev').textContent = DW.EVENT;
+  $('openDisplay').href = 'display.html?e=' + encodeURIComponent(DW.EVENT);
+  $('openPhone').href = 'index.html?e=' + encodeURIComponent(DW.EVENT);
+
+  try { code = sessionStorage.getItem('dw-code') || ''; } catch (e) {}
+  if (code) unlock(code);
+
+  $('enter').onclick = function () { unlock($('code').value.trim()); };
+  $('code').onkeydown = function (e) { if (e.key === 'Enter') $('enter').click(); };
+
+  async function unlock(c) {
+    var res = await db.rpc('doodle_check', { p_code: c });
+    if (res.error || !res.data) { msg('Wrong code'); try { sessionStorage.removeItem('dw-code'); } catch (e) {} return; }
+    code = c;
+    try { sessionStorage.setItem('dw-code', c); } catch (e) {}
+    $('login').classList.add('hidden'); $('tools').classList.remove('hidden');
+    msg(''); load();
+  }
+
+  async function load() {
+    var res = await db.from(DW.TABLE).select('*').eq('event', DW.EVENT).order('created_at', { ascending: false }).limit(1000);
+    if (res.error) { msg('Could not load: ' + res.error.message); return; }
+    rows = res.data;
+    $('n').textContent = rows.length;
+    var g = $('grid'); g.innerHTML = '';
+    rows.forEach(function (r) {
+      var t = document.createElement('div'); t.className = 'tile';
+      t.innerHTML = '<img loading="lazy" alt=""><div class="meta"><span></span><span class="muted"></span></div><button class="danger">Hide</button>';
+      t.querySelector('img').src = DW.imageUrl(r.image_path);
+      t.querySelector('.meta span').textContent = r.name || '(no name)';
+      t.querySelector('.meta .muted').textContent = new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      t.querySelector('button').onclick = async function () {
+        var res = await db.rpc('doodle_hide', { p_id: r.id, p_code: code });
+        if (res.error || !res.data) { msg('Could not hide'); return; }
+        t.remove(); $('n').textContent = --rows.length;
+        msg('Hidden. It leaves the display within 15 seconds.');
+      };
+      g.appendChild(t);
+    });
+  }
+  $('refresh').onclick = load;
+
+  // Two taps instead of a confirm() dialog.
+  var armTimer;
+  $('clear').onclick = async function () {
+    var b = $('clear');
+    if (!b.classList.contains('armed')) {
+      b.classList.add('armed'); b.textContent = 'Tap again to clear everything';
+      armTimer = setTimeout(function () { b.classList.remove('armed'); b.textContent = 'Clear the wall'; }, 4000);
+      return;
+    }
+    clearTimeout(armTimer); b.classList.remove('armed'); b.textContent = 'Clear the wall';
+    var res = await db.rpc('doodle_clear', { p_event: DW.EVENT, p_code: code });
+    if (res.error || res.data < 0) { msg('Could not clear'); return; }
+    msg('Cleared ' + res.data + ' drawings. Files are kept in storage.');
+    load();
+  };
+
+  $('zip').onclick = async function () {
+    if (!rows.length) { msg('Nothing to download'); return; }
+    var zip = new JSZip();
+    for (var i = 0; i < rows.length; i++) {
+      msg('Downloading ' + (i + 1) + ' of ' + rows.length);
+      var r = rows[i];
+      var blob = await fetch(DW.imageUrl(r.image_path)).then(function (x) { return x.blob(); });
+      var stamp = r.created_at.replace(/[:.]/g, '-').slice(0, 19);
+      var who = (r.name || 'guest').replace(/[^a-z0-9]+/gi, '_').slice(0, 20);
+      zip.file(stamp + '_' + who + '_' + r.shape + '.png', blob);
+    }
+    var out = await zip.generateAsync({ type: 'blob' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(out); a.download = 'doodle-wall-' + DW.EVENT + '.zip'; a.click();
+    msg('Downloaded ' + rows.length + ' drawings');
+  };
+})();
+</script>
+</body>
+</html>
