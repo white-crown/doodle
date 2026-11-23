@@ -72,16 +72,43 @@
 
 <div class="falcon" id="falcon"><div class="body">
   <svg viewBox="0 0 200 130" aria-hidden="true">
-    <g class="wing back"><path d="M110 66 C102 40 86 16 58 2 C68 16 72 28 74 38 C66 34 58 34 52 36 C64 42 72 50 76 60 Z" fill="#4a3426"/></g>
-    <path d="M46 64 L6 52 L12 64 L4 74 L46 72 Z" fill="#5a4030"/>
-    <path d="M40 68 C60 54 112 50 142 60 C152 64 152 74 142 76 C112 84 62 82 40 72 Z" fill="#7a5a42"/>
-    <path d="M62 74 C86 80 114 80 140 74 C128 83 92 86 62 78 Z" fill="#ead9bb"/>
-    <path d="M98 78 L100 94 M108 78 L106 94" stroke="#e8b64c" stroke-width="4" stroke-linecap="round"/>
-    <circle cx="150" cy="62" r="14" fill="#6b4f3a"/>
-    <path d="M144 64 C146 70 146 74 142 78" stroke="#2e2018" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M161 57 L177 64 L161 69 Z" fill="#e8b64c"/>
-    <circle cx="155" cy="59" r="2.8" fill="#111"/>
-    <g class="wing front"><path d="M98 68 C94 38 78 12 40 -2 C52 10 58 20 60 28 C50 24 42 24 34 26 C48 34 56 42 60 50 C52 50 44 52 40 56 C56 58 70 62 80 70 Z" fill="#8c6a4f"/></g>
+    <defs>
+      <linearGradient id="fWing" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#6b5444"/><stop offset=".6" stop-color="#4e3d33"/><stop offset="1" stop-color="#2f2621"/></linearGradient>
+      <linearGradient id="fBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b4a3f"/><stop offset="1" stop-color="#7d6555"/></linearGradient>
+    </defs>
+    <!-- far wing -->
+    <g class="wing back"><path d="M114 63 C108 46 96 28 70 6 L76 20 L68 16 L76 28 L66 26 L76 38 L66 38 L80 48 C88 54 96 60 102 66 Z" fill="#3b2f28"/></g>
+    <!-- tail, long and barred -->
+    <path d="M66 67 L18 60 C14 64 14 74 18 78 L66 76 Z" fill="#5d4a3e"/>
+    <path d="M30 61.5 L30 76.6 M40 62.8 L40 76.9 M50 64.2 L50 76.5" stroke="#2c231e" stroke-width="3"/>
+    <path d="M18 60 C14 64 14 74 18 78 L22 77.8 C19 72 19 66 22 60.5 Z" fill="#f1e4cc"/>
+    <!-- body -->
+    <path d="M58 70 C76 56 118 50 146 56 C158 59 160 70 152 76 C130 88 84 86 58 76 Z" fill="url(#fBack)"/>
+    <!-- cream chest with dark spots -->
+    <path d="M78 77 C100 86 130 85 151 74 C146 84 110 93 78 80 Z" fill="#f3e7d1"/>
+    <path d="M140 74 C150 70 158 66 160 62 C162 72 156 80 146 82 Z" fill="#f3e7d1"/>
+    <g fill="#5a4436"><ellipse cx="100" cy="82" rx="2.4" ry="1.4"/><ellipse cx="112" cy="84" rx="2.4" ry="1.4"/><ellipse cx="124" cy="83" rx="2.4" ry="1.4"/><ellipse cx="136" cy="80" rx="2.2" ry="1.3"/><ellipse cx="146" cy="77" rx="2" ry="1.2"/><ellipse cx="90" cy="80" rx="2.2" ry="1.3"/></g>
+    <!-- yellow legs and black talons -->
+    <path d="M102 82 L101 93 M110 82 L109 93" stroke="#f2c230" stroke-width="4" stroke-linecap="round"/>
+    <path d="M96 95 Q100 99 104 95 M104 95 Q108 99 113 95" stroke="#1a1512" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <!-- head: dark hood, cream cheek, the falcon "moustache" -->
+    <path d="M144 52 C150 44 166 44 170 54 C172 62 166 70 156 72 C148 72 142 64 144 52 Z" fill="#2f2621"/>
+    <path d="M152 62 C156 60 164 60 166 64 C164 70 158 73 152 71 Z" fill="#f3e7d1"/>
+    <path d="M156 58 C153 62 152 68 155 72 C158 68 159 63 159 59 Z" fill="#1e1915"/>
+    <!-- hooked beak with yellow cere -->
+    <path d="M168 53 L173 54 L172 59 L168 59 Z" fill="#f2c230"/>
+    <path d="M172 53 C179 53 183 58 181 65 C179 62 176 61 172 61 Z" fill="#3a3b44"/>
+    <path d="M181 65 C181 62 179 61 177 61" stroke="#1a1a20" stroke-width="1.2" fill="none"/>
+    <!-- eye: yellow ring, dark eye, highlight -->
+    <circle cx="162" cy="54" r="4.6" fill="#f2c230"/>
+    <circle cx="162.4" cy="54" r="3.2" fill="#0e0b09"/>
+    <circle cx="163.4" cy="52.9" r="1" fill="#fff"/>
+    <!-- near wing: long and pointed with barred flight feathers -->
+    <g class="wing front">
+      <path d="M100 70 C98 50 88 28 52 -4 L60 12 L48 6 L58 20 L44 16 L56 30 L42 28 L56 42 L44 42 L60 52 C70 58 80 64 88 72 Z" fill="url(#fWing)"/>
+      <path d="M58 20 L84 50 M56 30 L80 56 M56 42 L76 60 M60 12 L86 44" stroke="#2a211c" stroke-width="1.6" opacity=".7"/>
+      <path d="M88 72 C84 60 80 50 74 42 C84 50 92 58 100 70 Z" fill="#8a705e"/>
+    </g>
   </svg>
 </div></div>
 
@@ -116,6 +143,12 @@
   function maxOnWall() { return DW.MAX_PARAM ? Math.min(200, Math.max(6, DW.MAX_PARAM)) : DW.theme(theme).max; }
 
   // ---------------------------------------------------------------- theme
+  var lastSizes = '';
+  // Size settings from the operator, in percent (100 = normal).
+  function bgOpt(k) {
+    var v = +(DW.backgroundFor(cfg, theme)[k] || 100);
+    return Math.max(40, Math.min(250, v || 100)) / 100;
+  }
   function applyTheme(next) {
     cfg = next || {};
     var changed = theme !== (DW.THEMES[cfg.theme] ? cfg.theme : 'christmas');
@@ -126,7 +159,9 @@
     document.getElementById('title').textContent = params.get('title') || cfg.title || t.title;
     document.getElementById('tagline').textContent = params.get('tagline') || cfg.tagline || t.tagline;
     fx.setMode(theme);
-    if (changed || !slots.length) layout();
+    var sz = JSON.stringify([bgOpt('items'), bgOpt('map')]);
+    if (changed || !slots.length || sz !== lastSizes) layout();
+    lastSizes = sz;
   }
 
   // ---------------------------------------------------------------- layout
@@ -136,8 +171,9 @@
     decor.innerHTML = ''; mapPath = null; mapBox = null;
     if (theme !== 'qatar') return;
     var m = DW.QATAR_MAP;
-    var mh = H * 0.86, mw = mh * m.w / m.h;
-    var left = Math.max(W * 0.33, W * 0.54 - mw / 2), top = H * 0.07;
+    var mh = H * 0.97 * bgOpt('map'), mw = mh * m.w / m.h;
+    if (mw > W * 0.62) { mw = W * 0.62; mh = mw * m.h / m.w; }
+    var left = Math.max(W * 0.28, W * 0.54 - mw / 2), top = (H - mh) / 2 + H * 0.01;
     mapBox = { left: left, top: top, w: mw, h: mh, s: mh / m.h };
     decor.innerHTML = '<svg style="left:' + left + 'px;top:' + top + 'px;width:' + mw + 'px;height:' + mh + 'px" viewBox="0 0 ' + m.w + ' ' + m.h + '">' +
       '<defs><linearGradient id="sand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e7cc" stop-opacity=".22"/><stop offset="1" stop-color="#e2c48f" stop-opacity=".12"/></linearGradient></defs>' +
@@ -164,8 +200,11 @@
       if (out.length >= max) break;
       c *= 0.95;
     }
-    cell = c * 0.86;
-    out.forEach(function (s) { s.x += c * 0.07; });
+    cell = c * 0.86 * bgOpt('items');
+    out.forEach(function (s) {
+      s.x += (c - cell) / 2; s.y += (c - cell) / 2;
+      s.x = Math.max(4, Math.min(W - cell - 4, s.x)); s.y = Math.max(4, Math.min(H - cell - 4, s.y));
+    });
     return out;
   }
 
@@ -173,7 +212,9 @@
     var top = H * 0.14, bottom = H * 0.05 + 24;
     var usable = H - top - bottom;
     cell = Math.sqrt((W * usable) / (max * 1.15));
-    var cols = Math.max(1, Math.floor(W / cell)), rows = Math.max(1, Math.floor(usable / cell));
+    var gridCell = cell;
+    cell = cell * bgOpt('items');
+    var cols = Math.max(1, Math.floor(W / gridCell)), rows = Math.max(1, Math.floor(usable / gridCell));
     var gx = W / cols, gy = usable / rows;
     var qr = document.querySelector('.join').getBoundingClientRect();
     var out = [];
@@ -181,6 +222,7 @@
       for (var c = 0; c < cols; c++) {
         var x = c * gx + (gx - cell) / 2 + (Math.random() - .5) * gx * 0.18;
         var y = top + r * gy + (gy - cell) / 2 + (Math.random() - .5) * gy * 0.18;
+        x = Math.max(4, Math.min(W - cell - 4, x)); y = Math.max(4, Math.min(H - cell - 4, y));
         if (!(x + cell > qr.left - 10 && y + cell > qr.top - 10)) out.push({ x: x, y: y, rot: (Math.random() - .5) * 16, used: null });
       }
     }

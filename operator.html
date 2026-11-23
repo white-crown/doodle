@@ -93,6 +93,21 @@
           <button id="bgReset">Reset to theme default</button>
           <button id="bgSave" class="primary">Save background</button>
         </div>
+        <div class="bar" style="margin:0">
+          <label class="inline">Picture fit
+            <select id="bgFit">
+              <option value="cover">Fill the screen</option>
+              <option value="contain">Show the whole picture</option>
+              <option value="stretch">Stretch to the screen</option>
+              <option value="custom">Custom size</option>
+            </select>
+          </label>
+          <label class="inline" id="zoomWrap">Picture size <input type="range" id="bgZoom" min="30" max="250" step="5"> <b id="bgZoomV"></b></label>
+        </div>
+        <div class="bar" style="margin:0">
+          <label class="inline">Drawing size on the wall <input type="range" id="bgItems" min="50" max="200" step="5"> <b id="bgItemsV"></b></label>
+          <label class="inline" id="mapWrap">Qatar map size <input type="range" id="bgMap" min="60" max="140" step="5"> <b id="bgMapV"></b></label>
+        </div>
         <p class="muted small" style="margin:0">A picture covers the whole screen with a light dark layer so the drawings stay easy to see. Each theme keeps its own background.</p>
       </div>
     </div>
@@ -155,22 +170,35 @@
     draft = Object.assign({}, bgs[th] || {});
     $('bgThemeName').textContent = DW.theme(th).label;
     $('c1').value = draft.c1 || v.bg1; $('c2').value = draft.c2 || v.bg2;
-    paintPreview();
+    paintPreview(); showSizes();
   }
   function paintPreview() {
     var th = $('theme').value, v = DW.theme(th).vars;
     var grad = 'radial-gradient(130% 90% at 50% 0%, ' + (draft.c1 || v.bg1) + ' 0%, ' + (draft.c2 || v.bg2) + ' 75%)';
     $('bgPreview').style.backgroundImage = draft.image
-      ? 'linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url("' + DW.bgImageUrl(draft.image) + '")' : grad;
+      ? 'linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url("' + DW.bgImageUrl(draft.image) + '"), ' + grad : grad;
+    $('bgPreview').style.backgroundSize = draft.image ? 'cover, ' + DW.bgSize(draft) + ', cover' : 'cover';
+    $('bgPreview').style.backgroundRepeat = 'no-repeat';
   }
   $('c1').oninput = function () { draft.c1 = $('c1').value; paintPreview(); };
   $('c2').oninput = function () { draft.c2 = $('c2').value; paintPreview(); };
   $('bgNoImage').onclick = function () { delete draft.image; paintPreview(); };
-  $('bgReset').onclick = function () { draft = {}; showBgDraft(); };
+  $('bgReset').onclick = function () { draft = {}; showBgDraft(); showSizes(); };
   function showBgDraft() {
     var v = DW.theme($('theme').value).vars;
     $('c1').value = draft.c1 || v.bg1; $('c2').value = draft.c2 || v.bg2; paintPreview();
   }
+  function showSizes() {
+    $('bgFit').value = draft.fit || 'cover';
+    $('bgZoom').value = draft.zoom || 100; $('bgItems').value = draft.items || 100; $('bgMap').value = draft.map || 100;
+    $('bgZoomV').textContent = $('bgZoom').value + '%'; $('bgItemsV').textContent = $('bgItems').value + '%'; $('bgMapV').textContent = $('bgMap').value + '%';
+    $('zoomWrap').style.display = $('bgFit').value === 'custom' ? '' : 'none';
+    $('mapWrap').style.display = $('theme').value === 'qatar' ? '' : 'none';
+  }
+  $('bgFit').onchange = function () { draft.fit = $('bgFit').value; showSizes(); paintPreview(); };
+  $('bgZoom').oninput = function () { draft.zoom = +$('bgZoom').value; showSizes(); paintPreview(); };
+  $('bgItems').oninput = function () { draft.items = +$('bgItems').value; showSizes(); };
+  $('bgMap').oninput = function () { draft.map = +$('bgMap').value; showSizes(); };
 
   // Shrink big photos before upload: max 2560 px wide, JPEG.
   function shrink(file) {
@@ -206,6 +234,10 @@
     if (draft.c1 && draft.c1.toLowerCase() !== v.bg1.toLowerCase()) bg.c1 = draft.c1;
     if (draft.c2 && draft.c2.toLowerCase() !== v.bg2.toLowerCase()) bg.c2 = draft.c2;
     if (draft.image) bg.image = draft.image;
+    if (draft.fit && draft.fit !== 'cover') bg.fit = draft.fit;
+    if (draft.fit === 'custom' && draft.zoom && draft.zoom !== 100) bg.zoom = draft.zoom;
+    if (draft.items && draft.items !== 100) bg.items = draft.items;
+    if (th === 'qatar' && draft.map && draft.map !== 100) bg.map = draft.map;
     var res = await db.rpc('doodle_set_background', { p_event: DW.EVENT, p_theme: th, p_bg: bg, p_code: code });
     if (res.error || !res.data) { msg('Could not save the background'); return; }
     if (Object.keys(bg).length) bgs[th] = bg; else delete bgs[th];

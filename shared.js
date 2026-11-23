@@ -166,16 +166,25 @@ DW.backgroundFor = function (cfg, theme) {
 DW.bgImageUrl = function (path) {
   return DW.SUPABASE_URL + '/storage/v1/object/public/doodle-bg/' + path;
 };
+// Picture fit: cover (fill screen), contain (whole picture), stretch, or custom zoom %.
+DW.bgSize = function (bg) {
+  if (bg.fit === 'contain') return 'contain';
+  if (bg.fit === 'stretch') return '100% 100%';
+  if (bg.fit === 'custom') return (bg.zoom || 100) + '% auto';
+  return 'cover';
+};
 DW.applyBackground = function (theme, bg) {
   var v = DW.theme(theme).vars, s = document.documentElement.style, b = document.body.style;
   bg = bg || {};
   s.setProperty('--bg1', bg.c1 || v.bg1);
   s.setProperty('--bg2', bg.c2 || v.bg2);
   if (bg.image) {
-    b.backgroundImage = 'linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url("' + DW.bgImageUrl(bg.image) + '")';
-    b.backgroundSize = 'cover'; b.backgroundPosition = 'center';
+    b.backgroundImage = 'linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url("' + DW.bgImageUrl(bg.image) + '"), ' +
+      'radial-gradient(120% 80% at 50% 0%, var(--bg1) 0%, var(--bg2) 70%)';
+    b.backgroundSize = 'cover, ' + DW.bgSize(bg) + ', cover';
+    b.backgroundPosition = 'center'; b.backgroundRepeat = 'no-repeat';
   } else {
-    b.backgroundImage = ''; b.backgroundSize = ''; b.backgroundPosition = '';
+    b.backgroundImage = ''; b.backgroundSize = ''; b.backgroundPosition = ''; b.backgroundRepeat = '';
   }
 };
 

@@ -18,11 +18,11 @@
     color: var(--ink); font-family: 'Fredoka', system-ui, sans-serif;
     display: flex; justify-content: center; overscroll-behavior: none;
   }
-  .app { width: 100%; max-width: 520px; min-height: 100%; padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .app { width: 100%; max-width: 620px; min-height: 100%; padding: 10px 10px 20px; display: flex; flex-direction: column; gap: 12px; }
   header { text-align: center; color: #fdf8ef; }
   header h1 { margin: 4px 0 0; font-size: 26px; font-weight: 700; letter-spacing: .3px; }
   header p { margin: 2px 0 0; color: #cfe3d8; font-size: 15px; }
-  .card { background: var(--panel); border-radius: 22px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .card { background: var(--panel); border-radius: 22px; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
   .hidden { display: none !important; }
 
   /* Step 1: pick a shape */
@@ -35,7 +35,7 @@
   .shape-btn:active { transform: scale(.96); border-color: var(--accent); }
 
   /* Step 2: draw */
-  .stage { position: relative; width: 100%; max-width: 56vh; margin: 0 auto; aspect-ratio: 1; background: repeating-conic-gradient(#f1eadc 0 25%, #f8f3ea 0 50%) 0 0/24px 24px; border-radius: 16px; overflow: hidden; }
+  .stage { position: relative; width: 100%; max-width: 66vh; margin: 0 auto; aspect-ratio: 1; background: #fffdf8; border: 2px dashed #d9cdb8; border-radius: 16px; overflow: hidden; }
   canvas#pad { width: 100%; height: 100%; display: block; touch-action: none; }
   .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .colors { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; }
@@ -56,6 +56,8 @@
   .btn.primary { background: var(--accent); color: var(--accent-ink); }
   .btn.ghost { background: transparent; color: var(--muted); border: 2px solid var(--line); flex: 0 0 auto; padding: 0 16px; }
   .btn:disabled { opacity: .6; }
+  .hint { margin: 0 0 8px; text-align: center; color: var(--muted); font-size: 14px; }
+  input.need { border-color: var(--accent); }
   .err { color: var(--accent); font-size: 14px; text-align: center; min-height: 1em; margin: 0; }
 
   /* Step 3: sent */
@@ -80,7 +82,8 @@
 
   <!-- Step 2 -->
   <section id="step-draw" class="card hidden">
-    <div class="stage"><canvas id="pad" width="600" height="600"></canvas></div>
+    <p class="hint">Draw anywhere in the box. Sign your name around the shape too!</p>
+    <div class="stage"><canvas id="pad" width="800" height="800"></canvas></div>
     <div style="height:12px"></div>
     <div class="colors" id="colors"></div>
     <div style="height:10px"></div>
@@ -93,7 +96,7 @@
       <button class="tool" id="undo">Undo</button>
     </div>
     <div style="height:12px"></div>
-    <input type="text" id="name" maxlength="30" placeholder="Your name (optional)" autocomplete="off">
+    <input type="text" id="name" maxlength="30" placeholder="Your name" required autocomplete="off">
     <div style="height:12px"></div>
     <div class="actions">
       <button class="btn ghost" id="back">Back</button>
@@ -116,7 +119,8 @@
 <script>
 (function () {
   var db = DW.client();
-  var SIZE = 600, PAD = 26, SCALE = (SIZE - PAD * 2) / 100;
+  // The shape sits in the middle with room around it for signatures.
+  var SIZE = 800, PAD = 130, SCALE = (SIZE - PAD * 2) / 100;
   var COLORS = DW.theme('christmas').palette;
 
   var pad = document.getElementById('pad'), ctx = pad.getContext('2d');
@@ -178,9 +182,8 @@
     shape = s;
     shapePath = new Path2D();
     shapePath.addPath(new Path2D(s.d), new DOMMatrix([SCALE, 0, 0, SCALE, PAD, PAD]));
-    paint.width = SIZE;               // resets the canvas and its clip
-    pctx = paint.getContext('2d');
-    pctx.clip(shapePath);             // everything painted stays inside the shape
+    paint.width = SIZE;               // resets the canvas
+    pctx = paint.getContext('2d');    // no clip: lines outside the shape are kept (signatures)
     pctx.lineCap = 'round'; pctx.lineJoin = 'round';
     history = []; dirty = false;
     $('err').textContent = '';
@@ -195,6 +198,30 @@
     ctx.drawImage(paint, 0, 0);
     ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.strokeStyle = '#23201c';
     ctx.stroke(shapePath);
+  }
+
+  // Final picture: a soft white outline around strokes so signatures read on dark walls,
+  // trimmed to the drawn area so the wall shows it as big as possible.
+  function exportCanvas() {
+    var o = document.createElement('canvas'); o.width = o.height = SIZE;
+    var oc = o.getContext('2d');
+    for (var a = 0; a < 16; a++) oc.drawImage(paint, Math.cos(a / 16 * 6.283) * 5, Math.sin(a / 16 * 6.283) * 5);
+    oc.globalCompositeOperation = 'source-in'; oc.fillStyle = 'rgba(255,255,255,.9)'; oc.fillRect(0, 0, SIZE, SIZE);
+    oc.globalCompositeOperation = 'source-over';
+    oc.fillStyle = '#ffffff'; oc.fill(shapePath);
+    oc.drawImage(paint, 0, 0);
+    oc.lineWidth = 7; oc.lineJoin = 'round'; oc.strokeStyle = '#23201c'; oc.stroke(shapePath);
+    // Trim empty space, keep it square so the wall layout stays the same.
+    var d = oc.getImageData(0, 0, SIZE, SIZE).data, x0 = SIZE, y0 = SIZE, x1 = 0, y1 = 0;
+    for (var y = 0; y < SIZE; y += 2) for (var x = 0; x < SIZE; x += 2) {
+      if (d[(y * SIZE + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    var side = Math.min(SIZE, Math.max(x1 - x0, y1 - y0) + 16);
+    var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    var sx = Math.max(0, Math.min(SIZE - side, cx - side / 2)), sy = Math.max(0, Math.min(SIZE - side, cy - side / 2));
+    var out = document.createElement('canvas'); out.width = out.height = 600;
+    out.getContext('2d').drawImage(o, sx, sy, side, side, 0, 0, 600, 600);
+    return out;
   }
 
   function snapshot() {
@@ -220,9 +247,10 @@
     var p = pos(e);
     if (tool === 'fill') {
       // Fill goes behind what is already drawn, so lines stay on top.
+      pctx.save(); pctx.clip(shapePath);
       pctx.globalCompositeOperation = 'destination-over';
       pctx.fillStyle = color; pctx.fillRect(0, 0, SIZE, SIZE);
-      pctx.globalCompositeOperation = 'source-over';
+      pctx.restore();
       render(); return;
     }
     try { pad.setPointerCapture(e.pointerId); } catch (err) {}
@@ -244,6 +272,7 @@
     pctx.putImageData(history.pop(), 0, 0);
     render();
   };
+  $('name').oninput = function () { $('name').classList.remove('need'); };
   $('back').onclick = function () { show('step-pick'); };
   $('again').onclick = function () { show('step-pick'); };
 
@@ -251,13 +280,14 @@
     var btn = $('send');
     $('err').textContent = '';
     if (!dirty) { $('err').textContent = 'Add some color first'; return; }
+    if (!$('name').value.trim()) { $('err').textContent = 'Please type your name'; $('name').classList.add('need'); $('name').focus(); return; }
     btn.disabled = true; btn.textContent = 'Sending...';
     try {
-      var blob = await new Promise(function (res) { pad.toBlob(res, 'image/png'); });
+      var blob = await new Promise(function (res) { exportCanvas().toBlob(res, 'image/png'); });
       var path = DW.EVENT + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.png';
       var up = await db.storage.from(DW.BUCKET).upload(path, blob, { contentType: 'image/png' });
       if (up.error) throw up.error;
-      var name = $('name').value.trim().slice(0, 30) || null;
+      var name = $('name').value.trim().slice(0, 30);
       var ins = await db.from(DW.TABLE).insert({ event: DW.EVENT, name: name, shape: shape.id, image_path: path });
       if (ins.error) throw ins.error;
       $('done-img').src = URL.createObjectURL(blob);
