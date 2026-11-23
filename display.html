@@ -211,7 +211,7 @@
   function slotsInGrid(max) {
     var top = H * 0.14, bottom = H * 0.05 + 24;
     var usable = H - top - bottom;
-    cell = Math.sqrt((W * usable) / (max * 1.15));
+    cell = Math.min(usable * 0.9, W * 0.3, Math.sqrt((W * usable) / (max * 1.15)));
     var gridCell = cell;
     cell = cell * bgOpt('items');
     var cols = Math.max(1, Math.floor(W / gridCell)), rows = Math.max(1, Math.floor(usable / gridCell));
@@ -229,10 +229,24 @@
     return out;
   }
 
-  function layout() {
+  // Auto size: few drawings = big, more drawings = smaller, up to the wall's max.
+  var capacity = 0;
+  function wantCap(n) { return Math.min(maxOnWall(), Math.max(4, Math.ceil(n * 1.3))); }
+  function ensureRoom() {
+    if (freeSlot() || capacity >= maxOnWall()) return;
+    layout(items.size + 1);
+  }
+  function layout(n) {
     W = innerWidth; H = innerHeight;
     drawDecor();
-    slots = theme === 'qatar' ? slotsInMap(maxOnWall()) : slotsInGrid(maxOnWall());
+    capacity = wantCap(n === undefined ? items.size : n);
+    slots = theme === 'qatar' ? slotsInMap(capacity) : slotsInGrid(capacity);
+    // Never drop drawings because the grid rounded down.
+    var need = n === undefined ? items.size : Math.max(n, items.size);
+    while (slots.length < Math.min(need, maxOnWall()) && capacity < maxOnWall() * 1.5) {
+      capacity += 2;
+      slots = theme === 'qatar' ? slotsInMap(capacity) : slotsInGrid(capacity);
+    }
     // Put existing drawings back, newest first.
     var list = Array.from(items.values()).sort(function (a, b) { return b.row.created_at < a.row.created_at ? -1 : 1; });
     list.forEach(function (it) {
@@ -286,6 +300,7 @@
   }
 
   function addQuiet(row, delay) {
+    ensureRoom();
     var s = freeSlot();
     if (!s) return;
     var it = { row: row, el: makeEl(row), slot: s };
@@ -306,6 +321,7 @@
   // Every theme: pop big in the middle, then a theme-specific trip to the slot.
   async function popNew(row) {
     if (items.has(row.id)) return;
+    ensureRoom();
     var s = freeSlot();
     if (!s) { var o = oldest(); if (o) { removeItem(o.row.id); s = freeSlot(); } }
     if (!s) return;
@@ -634,6 +650,7 @@
     applyTheme(await DW.loadEvent(db));
     try {
       var rows = await fetchRows();
+      layout(rows.length);
       rows.forEach(function (r, i) { addQuiet(r, 80 * i); });
       updateCount();
     } catch (e) { console.error(e); document.getElementById('offline').style.display = 'block'; }
@@ -665,6 +682,8 @@
   }
   function shuffleTick() {
     if (document.hidden) return;
+    // Drawings were hidden or cleared: grow the rest back.
+    if (!busy && !queue.length && capacity > 4 && wantCap(items.size) <= capacity * 0.6) { layout(); return; }
     var list = Array.from(items.values()).filter(settled);
     if (!list.length) return;
     var n = Math.max(1, Math.min(4, Math.round(list.length * 0.2)));
