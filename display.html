@@ -58,6 +58,10 @@
   .balloons svg { width: 100%; height: 100%; display: block; overflow: visible; animation: bob 2.4s ease-in-out infinite alternate; transform-origin: 50% 99%; filter: drop-shadow(0 8px 10px rgba(0,0,0,.3)); }
   @keyframes bob { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
 
+  .fs { position: fixed; top: 2vh; right: 2vh; z-index: 30; font: 600 16px 'Fredoka', system-ui, sans-serif; padding: 12px 18px; border-radius: 14px;
+    border: 0; background: rgba(255,255,255,.92); color: #23201c; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,.35); transition: opacity .4s; }
+  body.idle .fs { opacity: 0; pointer-events: none; }
+  body.idle, body.idle * { cursor: none !important; }
   .offline { position: fixed; top: 1vh; right: 1vh; width: 10px; height: 10px; border-radius: 50%; background: #e55; z-index: 6; display: none; }
 </style>
 </head>
@@ -69,6 +73,7 @@
 <div class="join"><div id="qr"></div><b>Scan to draw</b></div>
 <div class="count" id="count"></div>
 <div class="offline" id="offline"></div>
+<button class="fs" id="fs">Full screen</button>
 
 <div class="falcon" id="falcon"><div class="body">
   <svg viewBox="0 0 200 130" aria-hidden="true">
@@ -132,7 +137,7 @@
   var theme = 'christmas', cfg = {};
 
   // QR points at the phone page. ?join=<url> overrides it (needed when testing on localhost).
-  var joinUrl = params.get('join') || new URL('index.html' + (DW.EVENT !== 'main' ? '?e=' + encodeURIComponent(DW.EVENT) : ''), location.href).href;
+  var joinUrl = params.get('join') || new URL('./' + (DW.EVENT !== 'main' ? '?e=' + encodeURIComponent(DW.EVENT) : ''), location.href).href;
   new QRCode(document.getElementById('qr'), { text: joinUrl, width: 400, height: 400, correctLevel: QRCode.CorrectLevel.M });
 
   var wall = document.getElementById('wall');
@@ -715,6 +720,29 @@
     }
   }
   setInterval(shuffleTick, 5000);
+
+  // ---------------------------------------------------------------- full screen
+  // Button, double-click or the F key. Button and mouse hide after 3 s of no movement.
+  var fsBtn = document.getElementById('fs'), idleT = null;
+  function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function toggleFs() {
+    var d = document.documentElement;
+    if (isFs()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+    else { var r = d.requestFullscreen || d.webkitRequestFullscreen; if (r) { var pr = r.call(d); if (pr && pr.catch) pr.catch(function () {}); } }
+  }
+  function fsLabel() { fsBtn.textContent = isFs() ? 'Exit full screen' : 'Full screen'; }
+  fsBtn.onclick = toggleFs;
+  document.addEventListener('dblclick', toggleFs);
+  document.addEventListener('keydown', function (e) { if (e.key === 'f' || e.key === 'F') toggleFs(); });
+  document.addEventListener('fullscreenchange', fsLabel);
+  document.addEventListener('webkitfullscreenchange', fsLabel);
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleT);
+    idleT = setTimeout(function () { document.body.classList.add('idle'); }, 3000);
+  }
+  ['mousemove', 'pointerdown', 'keydown'].forEach(function (t) { document.addEventListener(t, wake); });
+  wake();
 
   // Debug helper for previews: DW_test() pops the newest drawing again.
   window.DW_test = function () {

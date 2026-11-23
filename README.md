@@ -5,8 +5,8 @@ Guests scan a QR code, pick a shape, color it on their phone and send it. It pop
 | Page | Use |
 |---|---|
 | `index.html` | Phone page (the QR code points here) |
-| `display.html` | Big screen. Options: `?title=`, `?tagline=`, `?max=40`, `?e=event-name` |
-| `operator.html` | Pick the theme (Christmas, Qatar, New Year, Birthday, Wedding), set title, tagline and a background per theme (colors or a picture), hide drawings, clear the wall, download all as zip (needs the operator code) |
+| `display.html` (link: `/display`) | Big screen. Full screen button, double-click or F key. Options: `?title=`, `?tagline=`, `?max=40`, `?e=event-name` |
+| `operator.html` (link: `/operator`) | Pick the theme (Christmas, Qatar, New Year, Birthday, Wedding), set title, tagline and a background per theme (colors or a picture), hide drawings, clear the wall, download all as zip (needs the operator code) |
 
 Backend is Supabase (table `doodle_drawings`, bucket `doodle-wall`). Setup SQL is in `supabase/schema.sql`.
 

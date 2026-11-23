@@ -135,8 +135,8 @@
   function $(id) { return document.getElementById(id); }
   function msg(t) { $('msg').textContent = t || ''; }
   $('ev').textContent = DW.EVENT;
-  $('openDisplay').href = 'display.html?e=' + encodeURIComponent(DW.EVENT);
-  $('openPhone').href = 'index.html?e=' + encodeURIComponent(DW.EVENT);
+  $('openDisplay').href = 'display?e=' + encodeURIComponent(DW.EVENT);
+  $('openPhone').href = './?e=' + encodeURIComponent(DW.EVENT);
 
   try { code = sessionStorage.getItem('dw-code') || ''; } catch (e) {}
   if (code) unlock(code);
