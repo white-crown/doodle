@@ -72,6 +72,14 @@
     </div>
     <p class="muted small">The display switches right away. Phones pick it up the next time they open the page.</p>
   </div>
+  <div class="card hidden" id="codeCard">
+    <h2>Change operator code</h2>
+    <div class="bar" style="margin:0">
+      <input id="newCode" type="password" placeholder="New code (6 or more characters)" autocomplete="new-password">
+      <input id="newCode2" type="password" placeholder="Type it again" autocomplete="new-password">
+      <button id="saveCode">Change code</button>
+    </div>
+  </div>
   <p id="msg" class="muted"></p>
   <div class="grid" id="grid"></div>
 </div>
@@ -101,7 +109,7 @@
     if (res.error || !res.data) { msg('Wrong code'); try { sessionStorage.removeItem('dw-code'); } catch (e) {} return; }
     code = c;
     try { sessionStorage.setItem('dw-code', c); } catch (e) {}
-    $('login').classList.add('hidden'); $('tools').classList.remove('hidden'); $('themeCard').classList.remove('hidden');
+    $('login').classList.add('hidden'); $('tools').classList.remove('hidden'); $('themeCard').classList.remove('hidden'); $('codeCard').classList.remove('hidden');
     msg(''); load(); loadTheme();
   }
 
@@ -120,6 +128,18 @@
     $('theme').value = c.theme; $('title').value = c.title || ''; $('tagline').value = c.tagline || '';
     showDefaults();
   }
+
+  $('saveCode').onclick = async function () {
+    var a = $('newCode').value, b = $('newCode2').value;
+    if (a.length < 6) { msg('Use at least 6 characters'); return; }
+    if (a !== b) { msg('The two codes do not match'); return; }
+    var res = await db.rpc('doodle_set_code', { p_code: code, p_new: a });
+    if (res.error || !res.data) { msg('Could not change the code'); return; }
+    code = a;
+    try { sessionStorage.setItem('dw-code', a); } catch (e) {}
+    $('newCode').value = ''; $('newCode2').value = '';
+    msg('Code changed. Use the new one next time.');
+  };
 
   $('saveTheme').onclick = async function () {
     var res = await db.rpc('doodle_set_event', {

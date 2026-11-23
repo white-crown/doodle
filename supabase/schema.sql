@@ -111,3 +111,15 @@ grant execute on function public.doodle_set_event(text, text, text, text, text) 
 do $$ begin
   alter publication supabase_realtime add table public.doodle_events;
 exception when duplicate_object then null; end $$;
+
+-- v3: operator can change the code from operator.html ------------------------
+create or replace function public.doodle_set_code(p_code text, p_new text) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if not doodle_check(p_code) then return false; end if;
+  if p_new is null or char_length(p_new) < 6 or char_length(p_new) > 64 then return false; end if;
+  update doodle_settings set operator_code = p_new where id = 1;
+  return true;
+end $$;
+revoke all on function public.doodle_set_code(text, text) from public;
+grant execute on function public.doodle_set_code(text, text) to anon, authenticated;
