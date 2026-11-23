@@ -7,16 +7,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg1: #1d4a3b; --bg2: #0a1f19; --text: #fdf8ef; --soft: #cfe3d8; --gold: #e8b64c; --accent: #c8323b; }
+  :root { --bg1: #1d4a3b; --bg2: #0a1f19; --text: #fdf8ef; --soft: #cfe3d8; --accent: #c8323b; --accent-ink: #fff; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; }
-  body { background: radial-gradient(130% 90% at 50% 0%, var(--bg1) 0%, var(--bg2) 75%); color: var(--text); font-family: 'Fredoka', system-ui, sans-serif; cursor: none; }
-  #snow { position: fixed; inset: 0; pointer-events: none; }
-  #wall { position: fixed; inset: 0; }
+  body { background: radial-gradient(130% 90% at 50% 0%, var(--bg1) 0%, var(--bg2) 75%); color: var(--text); font-family: 'Fredoka', system-ui, sans-serif; cursor: none; transition: background .8s; }
+  #fx { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  #decor { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  #decor svg { position: absolute; overflow: visible; }
+  #wall { position: fixed; inset: 0; z-index: 1; }
 
   .title { position: fixed; top: 2.2vh; left: 0; right: 0; text-align: center; z-index: 5; pointer-events: none; }
   .title h1 { margin: 0; font-size: clamp(28px, 4.4vh, 64px); font-weight: 700; text-shadow: 0 4px 24px rgba(0,0,0,.4); }
   .title p { margin: .3vh 0 0; font-size: clamp(14px, 2vh, 28px); color: var(--soft); }
+  body[data-theme=qatar] .title { top: 34vh; left: 4vw; right: auto; width: 28vw; text-align: left; }
+  body[data-theme=qatar] .title h1 { font-size: clamp(32px, 6vh, 84px); line-height: 1.05; }
+  body[data-theme=qatar] .title p { margin-top: 1.4vh; font-size: clamp(14px, 2.3vh, 30px); }
 
   .join { position: fixed; right: 2vh; bottom: 2vh; z-index: 5; background: var(--text); color: #23201c; border-radius: 2vh; padding: 1.4vh; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
   .join #qr { width: 17vh; height: 17vh; }
@@ -24,29 +29,56 @@
   .join b { display: block; margin-top: .8vh; font-size: 2vh; }
   .count { position: fixed; left: 2vh; bottom: 2vh; z-index: 5; color: var(--soft); font-size: 2vh; }
 
-  .item { position: absolute; left: 0; top: 0; will-change: transform; transition: transform 1.1s cubic-bezier(.5,0,.2,1), opacity .8s ease; z-index: 1; }
+  .item { position: absolute; left: 0; top: 0; will-change: transform; transform-origin: 50% 0; transition: transform 1.1s cubic-bezier(.5,0,.2,1), opacity .8s ease; z-index: 1; }
   .item .sway { animation: sway 5s ease-in-out infinite alternate; transform-origin: 50% 0; }
   .item img { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
   .item .who { text-align: center; font-size: 12px; color: var(--soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .item.popping { z-index: 10; }
-  .item.popping .sway { animation: none; }
-  .item .banner { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); white-space: nowrap; background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 9px; font-weight: 600; opacity: 0; transition: opacity .3s; }
+  .item.popping, .item.carried { z-index: 10; }
+  .item.popping .sway, .item.carried .sway { animation: none; }
+  .item.popping .who, .item.carried .who { opacity: 0; }
+  .item .banner { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); white-space: nowrap; background: var(--accent); color: var(--accent-ink); padding: 3px 10px; border-radius: 999px; font-size: 9px; font-weight: 600; opacity: 0; transition: opacity .3s; margin-bottom: 4px; }
   .item.popping .banner { opacity: 1; }
   .item.leaving { opacity: 0; }
   @keyframes sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
   @keyframes popin { 0% { transform: scale(0) rotate(-20deg); } 70% { transform: scale(1.12) rotate(4deg); } 100% { transform: scale(1) rotate(0); } }
   .pop-anim { animation: popin .7s cubic-bezier(.2,1.4,.4,1) both; }
 
+  /* Falcon */
+  .falcon { position: fixed; left: 0; top: 0; z-index: 20; pointer-events: none; display: none; will-change: transform; }
+  .falcon .body { position: absolute; transform-origin: 50% 74%; }
+  .falcon svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 10px 12px rgba(0,0,0,.4)); }
+  .falcon .wing { transform-box: view-box; animation: flap .3s ease-in-out infinite alternate; }
+  .falcon .wing.front { transform-origin: 92px 68px; }
+  .falcon .wing.back { transform-origin: 102px 64px; animation-delay: -.05s; }
+  @keyframes flap { from { transform: scaleY(1); } to { transform: scaleY(-.55); } }
+  .falcon.glide .wing { animation-duration: .9s; }
+
   .offline { position: fixed; top: 1vh; right: 1vh; width: 10px; height: 10px; border-radius: 50%; background: #e55; z-index: 6; display: none; }
 </style>
 </head>
-<body>
-<canvas id="snow"></canvas>
+<body data-theme="christmas">
+<canvas id="fx"></canvas>
+<div id="decor"></div>
 <div id="wall"></div>
-<div class="title"><h1 id="title">Merry Christmas!</h1><p id="tagline">Scan the code, draw your own, and watch it appear here</p></div>
+<div class="title"><h1 id="title"></h1><p id="tagline"></p></div>
 <div class="join"><div id="qr"></div><b>Scan to draw</b></div>
 <div class="count" id="count"></div>
 <div class="offline" id="offline"></div>
+
+<div class="falcon" id="falcon"><div class="body">
+  <svg viewBox="0 0 200 130" aria-hidden="true">
+    <g class="wing back"><path d="M110 66 C102 40 86 16 58 2 C68 16 72 28 74 38 C66 34 58 34 52 36 C64 42 72 50 76 60 Z" fill="#4a3426"/></g>
+    <path d="M46 64 L6 52 L12 64 L4 74 L46 72 Z" fill="#5a4030"/>
+    <path d="M40 68 C60 54 112 50 142 60 C152 64 152 74 142 76 C112 84 62 82 40 72 Z" fill="#7a5a42"/>
+    <path d="M62 74 C86 80 114 80 140 74 C128 83 92 86 62 78 Z" fill="#ead9bb"/>
+    <path d="M98 78 L100 94 M108 78 L106 94" stroke="#e8b64c" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="150" cy="62" r="14" fill="#6b4f3a"/>
+    <path d="M144 64 C146 70 146 74 142 78" stroke="#2e2018" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M161 57 L177 64 L161 69 Z" fill="#e8b64c"/>
+    <circle cx="155" cy="59" r="2.8" fill="#111"/>
+    <g class="wing front"><path d="M98 68 C94 38 78 12 40 -2 C52 10 58 20 60 28 C50 24 42 24 34 26 C48 34 56 42 60 50 C52 50 44 52 40 56 C56 58 70 62 80 70 Z" fill="#8c6a4f"/></g>
+  </svg>
+</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -55,46 +87,104 @@
 (function () {
   var db = DW.client();
   var params = new URLSearchParams(location.search);
-  if (params.get('title')) document.getElementById('title').textContent = params.get('title');
-  if (params.get('tagline')) document.getElementById('tagline').textContent = params.get('tagline');
+  var theme = 'christmas', cfg = {};
 
   // QR points at the phone page. ?join=<url> overrides it (needed when testing on localhost).
-  var joinUrl = params.get('join') || new URL('index.html?e=' + encodeURIComponent(DW.EVENT), location.href).href;
+  var joinUrl = params.get('join') || new URL('index.html' + (DW.EVENT !== 'main' ? '?e=' + encodeURIComponent(DW.EVENT) : ''), location.href).href;
   new QRCode(document.getElementById('qr'), { text: joinUrl, width: 400, height: 400, correctLevel: QRCode.CorrectLevel.M });
 
   var wall = document.getElementById('wall');
   var items = new Map();      // id -> { el, slot, row }
   var slots = [], cell = 100;
   var queue = [], busy = false;
+  var W = innerWidth, H = innerHeight;
+  function maxOnWall() { return DW.MAX_PARAM ? Math.min(200, Math.max(6, DW.MAX_PARAM)) : DW.theme(theme).max; }
 
-  // ---- Layout: a jittered grid that avoids the title and the QR card ----
-  function layout() {
-    var W = innerWidth, H = innerHeight;
-    var top = H * 0.14, bottom = H * 0.05 + 24;   // room for the name labels and the counter
+  // ---------------------------------------------------------------- theme
+  function applyTheme(next) {
+    cfg = next || {};
+    var changed = theme !== (DW.THEMES[cfg.theme] ? cfg.theme : 'christmas');
+    theme = DW.THEMES[cfg.theme] ? cfg.theme : 'christmas';
+    if (DW.THEME_OVERRIDE && DW.THEMES[DW.THEME_OVERRIDE]) theme = DW.THEME_OVERRIDE;
+    var t = DW.theme(theme);
+    DW.applyVars(theme);
+    document.getElementById('title').textContent = params.get('title') || cfg.title || t.title;
+    document.getElementById('tagline').textContent = params.get('tagline') || cfg.tagline || t.tagline;
+    fx.setMode(theme);
+    if (changed || !slots.length) layout();
+  }
+
+  // ---------------------------------------------------------------- layout
+  var mapPath = null, mapBox = null;
+  function drawDecor() {
+    var decor = document.getElementById('decor');
+    decor.innerHTML = ''; mapPath = null; mapBox = null;
+    if (theme !== 'qatar') return;
+    var m = DW.QATAR_MAP;
+    var mh = H * 0.86, mw = mh * m.w / m.h;
+    var left = Math.max(W * 0.33, W * 0.54 - mw / 2), top = H * 0.07;
+    mapBox = { left: left, top: top, w: mw, h: mh, s: mh / m.h };
+    decor.innerHTML = '<svg style="left:' + left + 'px;top:' + top + 'px;width:' + mw + 'px;height:' + mh + 'px" viewBox="0 0 ' + m.w + ' ' + m.h + '">' +
+      '<defs><linearGradient id="sand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e7cc" stop-opacity=".22"/><stop offset="1" stop-color="#e2c48f" stop-opacity=".12"/></linearGradient></defs>' +
+      '<path d="' + m.d + '" fill="url(#sand)" stroke="rgba(255,255,255,.75)" stroke-width="' + (3 / mapBox.s) + '" stroke-linejoin="round"/></svg>';
+    mapPath = new Path2D();
+    mapPath.addPath(new Path2D(m.d), new DOMMatrix([mapBox.s, 0, 0, mapBox.s, left, top]));
+  }
+
+  var hit = document.createElement('canvas').getContext('2d');
+  function slotsInMap(max) {
+    // Shrink the cell until enough cells fit inside the map.
+    var area = mapBox.w * mapBox.h * 0.55;
+    var c = Math.sqrt(area / max), out = [];
+    for (var k = 0; k < 40; k++) {
+      out = [];
+      for (var y = mapBox.top; y + c <= mapBox.top + mapBox.h; y += c * 1.05) {
+        for (var x = mapBox.left - c * 0.3; x + c <= mapBox.left + mapBox.w + c * 0.3; x += c) {
+          var cx = x + c / 2, cy = y + c / 2;
+          if (hit.isPointInPath(mapPath, cx, cy) && hit.isPointInPath(mapPath, cx, y + c * 0.15) && hit.isPointInPath(mapPath, cx, y + c * 0.85)) {
+            out.push({ x: x + (Math.random() - .5) * c * 0.1, y: y + (Math.random() - .5) * c * 0.1, rot: (Math.random() - .5) * 14, used: null });
+          }
+        }
+      }
+      if (out.length >= max) break;
+      c *= 0.95;
+    }
+    cell = c * 0.86;
+    out.forEach(function (s) { s.x += c * 0.07; });
+    return out;
+  }
+
+  function slotsInGrid(max) {
+    var top = H * 0.14, bottom = H * 0.05 + 24;
     var usable = H - top - bottom;
-    cell = Math.sqrt((W * usable) / (DW.MAX_ON_WALL * 1.15));
+    cell = Math.sqrt((W * usable) / (max * 1.15));
     var cols = Math.max(1, Math.floor(W / cell)), rows = Math.max(1, Math.floor(usable / cell));
     var gx = W / cols, gy = usable / rows;
     var qr = document.querySelector('.join').getBoundingClientRect();
-    var old = slots;
-    slots = [];
+    var out = [];
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
         var x = c * gx + (gx - cell) / 2 + (Math.random() - .5) * gx * 0.18;
         var y = top + r * gy + (gy - cell) / 2 + (Math.random() - .5) * gy * 0.18;
-        var overQr = x + cell > qr.left - 10 && y + cell > qr.top - 10;
-        if (!overQr) slots.push({ x: x, y: y, rot: (Math.random() - .5) * 16, used: null });
+        if (!(x + cell > qr.left - 10 && y + cell > qr.top - 10)) out.push({ x: x, y: y, rot: (Math.random() - .5) * 16, used: null });
       }
     }
-    // Put existing drawings back into the new slots, newest first.
-    if (old.length) {
-      var list = Array.from(items.values()).sort(function (a, b) { return b.row.created_at < a.row.created_at ? -1 : 1; });
-      list.forEach(function (it) {
-        var s = freeSlot();
-        if (!s) { removeItem(it.row.id, true); return; }
-        s.used = it.row.id; it.slot = s; placeAt(it, s);
-      });
-    }
+    return out;
+  }
+
+  function layout() {
+    W = innerWidth; H = innerHeight;
+    drawDecor();
+    slots = theme === 'qatar' ? slotsInMap(maxOnWall()) : slotsInGrid(maxOnWall());
+    // Put existing drawings back, newest first.
+    var list = Array.from(items.values()).sort(function (a, b) { return b.row.created_at < a.row.created_at ? -1 : 1; });
+    list.forEach(function (it) {
+      var s = freeSlot();
+      if (!s) { removeItem(it.row.id, true); return; }
+      s.used = it.row.id; it.slot = s;
+      it.el.style.transition = 'transform 1s cubic-bezier(.5,0,.2,1)';
+      placeAt(it, s);
+    });
   }
 
   function freeSlot() {
@@ -106,6 +196,9 @@
     it.el.style.width = cell + 'px';
     it.el.style.transform = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + s.rot + 'deg)';
   }
+  function setXY(it, x, y, scale) {
+    it.el.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + scale + ')';
+  }
 
   function makeEl(row) {
     var el = document.createElement('div');
@@ -113,12 +206,8 @@
     el.innerHTML = '<div class="sway" style="animation-delay:-' + (Math.random() * 5).toFixed(2) + 's">' +
       '<span class="banner"></span><img alt=""><div class="who"></div></div>';
     el.querySelector('img').src = DW.imageUrl(row.image_path);
-    if (row.name) {
-      el.querySelector('.who').textContent = row.name;
-      el.querySelector('.banner').textContent = 'From ' + row.name;
-    } else {
-      el.querySelector('.banner').textContent = 'New drawing!';
-    }
+    el.querySelector('.who').textContent = row.name || '';
+    el.querySelector('.banner').textContent = row.name ? 'From ' + row.name : 'New drawing!';
     wall.appendChild(el);
     return el;
   }
@@ -139,7 +228,6 @@
     setTimeout(function () { it.el.remove(); }, 900);
   }
 
-  // Quiet add, used on first load.
   function addQuiet(row, delay) {
     var s = freeSlot();
     if (!s) return;
@@ -150,38 +238,54 @@
     setTimeout(function () { it.el.style.opacity = 1; it.el.querySelector('img').classList.add('pop-anim'); }, delay);
   }
 
-  // Big pop in the middle, then fly to a slot.
-  function popNew(row) {
-    return new Promise(function (done) {
-      if (items.has(row.id)) return done();
-      var s = freeSlot();
-      if (!s) { var o = oldest(); if (o) { removeItem(o.row.id); s = freeSlot(); } }
-      if (!s) return done();
-      var it = { row: row, el: makeEl(row), slot: s };
-      s.used = row.id; items.set(row.id, it);
-      updateCount();
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function imgReady(el) {
+    var img = el.querySelector('img');
+    return new Promise(function (r) { if (img.complete) r(); else { img.onload = r; img.onerror = r; } });
+  }
+  function ease(t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
 
-      var big = Math.min(innerHeight * 0.42, innerWidth * 0.35);
-      var cx = innerWidth / 2 - cell / 2, cy = innerHeight / 2 - cell / 2;
-      var el = it.el;
-      el.classList.add('popping');
-      el.style.width = cell + 'px';
-      el.style.transition = 'none';
-      el.style.transform = 'translate(' + cx + 'px,' + cy + 'px) scale(0)';
-      el.getBoundingClientRect();
-      var img = el.querySelector('img');
-      var go = function () {
-        el.style.transition = 'transform .7s cubic-bezier(.2,1.5,.4,1)';
-        el.style.transform = 'translate(' + cx + 'px,' + cy + 'px) scale(' + (big / cell) + ')';
-        setTimeout(function () {
-          el.style.transition = '';
-          el.classList.remove('popping');
-          placeAt(it, s);
-          setTimeout(done, 700);
-        }, 2600);
-      };
-      if (img.complete) go(); else { img.onload = go; img.onerror = go; }
-    });
+  // ---------------------------------------------------------------- arrivals
+  // Every theme: pop big in the middle, then a theme-specific trip to the slot.
+  async function popNew(row) {
+    if (items.has(row.id)) return;
+    var s = freeSlot();
+    if (!s) { var o = oldest(); if (o) { removeItem(o.row.id); s = freeSlot(); } }
+    if (!s) return;
+    var it = { row: row, el: makeEl(row), slot: s };
+    s.used = row.id; items.set(row.id, it);
+    refreshCount();
+    await imgReady(it.el);
+
+    var hurry = queue.length > 2;
+    var big = Math.min(H * 0.42, W * 0.32);
+    var cx = W / 2, cy = H / 2 - big / 2;           // top-centre of the big drawing
+    if (theme === 'qatar' && mapBox) cx = mapBox.left + mapBox.w / 2;
+    var el = it.el;
+    el.style.width = cell + 'px';
+    el.style.transition = 'none';
+    el.classList.add('popping');
+
+    if (theme === 'newyear') {
+      setXY(it, cx - cell / 2, cy, 0.001);
+      await fx.rocket(cx + (Math.random() - .5) * W * 0.3, cx, H / 2);
+      fx.burst(cx, H / 2, 140);
+    } else {
+      setXY(it, cx - cell / 2, cy, 0.001);
+    }
+    el.getBoundingClientRect();
+    el.style.transition = 'transform .7s cubic-bezier(.2,1.5,.4,1)';
+    setXY(it, cx - cell / 2, cy, big / cell);
+    await wait(hurry ? 1200 : 2400);
+
+    if (theme === 'qatar') {
+      await falconCarry(it, s, cx, cy, big, hurry);
+    } else {
+      el.style.transition = '';
+      el.classList.remove('popping');
+      placeAt(it, s);
+      await wait(700);
+    }
   }
 
   function enqueue(row) {
@@ -192,37 +296,186 @@
   async function pump() {
     if (busy) return;
     busy = true;
-    while (queue.length) await popNew(queue.shift());
+    while (queue.length) {
+      try { await popNew(queue.shift()); } catch (e) { console.error(e); }
+    }
     busy = false;
   }
 
+  // ---------------------------------------------------------------- falcon
+  var falcon = document.getElementById('falcon'), fbody = falcon.querySelector('.body');
+  var fdir = 1;
+  function sizeFalcon() {
+    var fw = Math.max(170, Math.min(380, Math.min(W, H) * 0.34));
+    var fh = fw * 0.65;
+    fbody.style.width = fw + 'px'; fbody.style.height = fh + 'px';
+    // Talons (100, 96 in the 200 x 130 viewBox) sit on the falcon's origin.
+    fbody.style.left = (-fw * 0.5) + 'px'; fbody.style.top = (-fh * 96 / 130) + 'px';
+    fbody.style.transformOrigin = (fw * 0.5) + 'px ' + (fh * 96 / 130) + 'px';
+  }
+  function setFalcon(p, dx, dy) {
+    if (dx !== undefined && Math.abs(dx) > 0.3) fdir = dx < 0 ? -1 : 1;
+    var a = dx !== undefined ? Math.atan2(dy, Math.abs(dx) + 0.001) : 0;
+    a = Math.max(-0.55, Math.min(0.55, a));
+    falcon.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+    fbody.style.transform = 'scaleX(' + fdir + ') rotate(' + a + 'rad)';
+  }
+  function cr(pts, t) {
+    var n = pts.length - 1, f = Math.min(t * n, n - 1e-6), i = Math.floor(f), u = f - i;
+    var p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, n)];
+    function c(a, b, d, e) { return 0.5 * (2 * b + (-a + d) * u + (2 * a - 5 * b + 4 * d - e) * u * u + (-a + 3 * b - 3 * d + e) * u * u * u); }
+    return { x: c(p0.x, p1.x, p2.x, p3.x), y: c(p0.y, p1.y, p2.y, p3.y) };
+  }
+  function fly(pts, dur, onStep, easing) {
+    return new Promise(function (res) {
+      var t0 = performance.now(), prev = cr(pts, 0);
+      (function f(now) {
+        var t = Math.min(1, (now - t0) / dur), e = easing ? easing(t) : t, p = cr(pts, e);
+        setFalcon(p, p.x - prev.x, p.y - prev.y); prev = p;
+        if (onStep) onStep(p, e);
+        if (t < 1) requestAnimationFrame(f); else res();
+      })(t0);
+    });
+  }
+
+  async function falconCarry(it, s, cx, cy, big, hurry) {
+    sizeFalcon();
+    var fromLeft = Math.random() < .5, side = fromLeft ? -1 : 1;
+    var start = { x: fromLeft ? -220 : W + 220, y: H * 0.18 };
+    falcon.style.display = 'block';
+    falcon.classList.remove('glide');
+    setFalcon(start, -side, 0);
+    // Swoop in and grab the drawing by its top.
+    await fly([start, { x: cx + side * W * 0.22, y: H * 0.05 }, { x: cx + side * W * 0.06, y: cy - H * 0.06 }, { x: cx, y: cy }], hurry ? 800 : 1200, null, ease);
+    it.el.classList.remove('popping'); it.el.classList.add('carried');
+    it.el.style.transition = 'none';
+
+    // Play with it: a loop around the screen, shrinking to wall size, then to the slot.
+    var r = Math.min(W, H) * 0.26, mx = cx, my = H * 0.5;
+    var target = { x: s.x + cell / 2, y: s.y };
+    var loop = hurry ? [{ x: cx, y: cy }, { x: (cx + target.x) / 2 - side * r * 0.6, y: Math.min(cy, target.y) - r * 0.4 }, target]
+      : [{ x: cx, y: cy }, { x: mx - side * r, y: my - r * 0.9 }, { x: mx - side * r * 1.4, y: my }, { x: mx, y: my + r * 0.7 },
+         { x: mx + side * r * 1.3, y: my - r * 0.2 }, { x: mx + side * r * 0.5, y: my - r }, { x: (mx + target.x) / 2, y: Math.min(my - r * 0.6, target.y - r * 0.3) }, target];
+    var s0 = big / cell;
+    await fly(loop, hurry ? 1400 : 3400, function (p, e) {
+      setXY(it, p.x - cell / 2, p.y, s0 + (1 - s0) * Math.min(1, e * 1.4));
+    }, ease);
+
+    // Drop it with a little bounce and fly away.
+    it.el.classList.remove('carried');
+    it.el.style.transition = 'transform .6s cubic-bezier(.2,1.6,.4,1)';
+    placeAt(it, s);
+    setTimeout(function () { it.el.style.transition = ''; }, 700);
+    falcon.classList.add('glide');
+    var exitX = target.x < W / 2 ? -260 : W + 260;
+    await fly([target, { x: target.x + (exitX > 0 ? 1 : -1) * W * 0.15, y: target.y - H * 0.25 }, { x: exitX, y: -120 }], 1100, null, function (t) { return t * t; });
+    falcon.style.display = 'none';
+  }
+
+  // ---------------------------------------------------------------- background effects
+  var fx = (function () {
+    var cv = document.getElementById('fx'), c = cv.getContext('2d');
+    var mode = 'christmas', flakes = [], stars = [], sparks = [], rockets = [], nextAmbient = 0;
+    function size() { cv.width = innerWidth; cv.height = innerHeight; }
+    size(); addEventListener('resize', size);
+    for (var i = 0; i < 150; i++) flakes.push({ x: Math.random(), y: Math.random(), r: Math.random() * 2.4 + .6, s: Math.random() * .0012 + .0004, d: Math.random() * 6.28 });
+    for (i = 0; i < 160; i++) stars.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.6 + .3, p: Math.random() * 6.28 });
+    var COLORS = ['#ffe066', '#e8b64c', '#f28cb8', '#4cc9f0', '#b5e853', '#ffffff', '#e5484d', '#8a5cd6'];
+
+    function burst(x, y, n, palette) {
+      var col = (palette || COLORS)[Math.floor(Math.random() * (palette || COLORS).length)];
+      var col2 = COLORS[Math.floor(Math.random() * COLORS.length)];
+      for (var i = 0; i < n; i++) {
+        var a = Math.random() * 6.28, v = Math.random() * 4.5 + 1.5;
+        sparks.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 60 + Math.random() * 40, c: i % 3 ? col : col2, r: Math.random() * 2 + 1.2 });
+      }
+    }
+    function rocket(fromX, toX, toY) {
+      return new Promise(function (res) {
+        rockets.push({ x: fromX, y: innerHeight + 10, sx: fromX, tx: toX, ty: toY, t: 0, dur: 55, done: res });
+      });
+    }
+
+    function tick(t) {
+      c.clearRect(0, 0, cv.width, cv.height);
+      if (mode === 'christmas') {
+        c.fillStyle = 'rgba(255,255,255,.75)';
+        flakes.forEach(function (f) {
+          f.y += f.s; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
+          var x = (f.x + Math.sin(t / 2000 + f.d) * 0.01) * cv.width;
+          c.beginPath(); c.arc(x, f.y * cv.height, f.r, 0, 6.28); c.fill();
+        });
+      } else if (mode === 'qatar') {
+        // Warm drifting dust and a few stars.
+        flakes.forEach(function (f, i) {
+          f.x += f.s * 0.6; if (f.x > 1.02) { f.x = -0.02; f.y = Math.random(); }
+          var y = (f.y + Math.sin(t / 2500 + f.d) * 0.01) * cv.height;
+          c.fillStyle = i % 3 ? 'rgba(246,231,204,.35)' : 'rgba(232,182,76,.5)';
+          c.beginPath(); c.arc(f.x * cv.width, y, f.r * 0.8, 0, 6.28); c.fill();
+        });
+      } else {
+        stars.forEach(function (s) {
+          c.fillStyle = 'rgba(255,255,255,' + (0.35 + 0.45 * Math.abs(Math.sin(t / 900 + s.p))) + ')';
+          c.beginPath(); c.arc(s.x * cv.width, s.y * cv.height * 0.85, s.r, 0, 6.28); c.fill();
+        });
+        if (t > nextAmbient) {
+          nextAmbient = t + 2500 + Math.random() * 3500;
+          burst(cv.width * (0.1 + Math.random() * 0.8), cv.height * (0.12 + Math.random() * 0.3), 60);
+        }
+      }
+      // Rockets and sparks run in every mode (only New Year launches them).
+      rockets = rockets.filter(function (r) {
+        r.t++;
+        var k = r.t / r.dur, e = 1 - Math.pow(1 - k, 2);
+        var px = r.sx + (r.tx - r.sx) * e, py = (innerHeight + 10) + (r.ty - innerHeight - 10) * e;
+        sparks.push({ x: px, y: py, vx: (Math.random() - .5) * .6, vy: Math.random() * .8, life: 0, max: 22, c: '#ffe8a3', r: 1.6 });
+        c.fillStyle = '#fff'; c.beginPath(); c.arc(px, py, 3, 0, 6.28); c.fill();
+        if (r.t >= r.dur) { r.done(); return false; }
+        return true;
+      });
+      sparks = sparks.filter(function (p) {
+        p.life++; p.x += p.vx; p.y += p.vy; p.vx *= 0.97; p.vy = p.vy * 0.97 + 0.05;
+        var a = 1 - p.life / p.max;
+        if (a <= 0) return false;
+        c.globalAlpha = a; c.fillStyle = p.c;
+        c.beginPath(); c.arc(p.x, p.y, p.r, 0, 6.28); c.fill();
+        c.globalAlpha = 1;
+        return true;
+      });
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    return { setMode: function (m) { mode = m; }, burst: burst, rocket: rocket };
+  })();
+
+  // ---------------------------------------------------------------- data
   var total = 0;
   function updateCount() {
     document.getElementById('count').textContent = total ? total + (total === 1 ? ' drawing' : ' drawings') : '';
   }
-
   async function refreshCount() {
-    var res = await db.from(DW.TABLE).select('id', { count: 'exact', head: true }).eq('event', DW.EVENT);
+    var res = await db.from(DW.TABLE).select('id', { count: 'exact', head: true }).eq('event', DW.EVENT).eq('hidden', false);
     if (!res.error) { total = res.count || 0; updateCount(); }
   }
-
   async function fetchRows() {
     var res = await db.from(DW.TABLE).select('id,created_at,event,name,shape,image_path,hidden', { count: 'exact' })
-      .eq('event', DW.EVENT).order('created_at', { ascending: false }).limit(DW.MAX_ON_WALL);
+      .eq('event', DW.EVENT).order('created_at', { ascending: false }).limit(maxOnWall());
     if (res.error) throw res.error;
     total = res.count || res.data.length;
     return res.data;
   }
 
-  // Poll as a safety net: catches anything realtime missed and removes hidden drawings.
+  // Poll as a safety net: catches anything realtime missed, hidden drawings and theme changes.
   async function sync() {
     try {
       var rows = await fetchRows();
       document.getElementById('offline').style.display = 'none';
       var ids = new Set(rows.map(function (r) { return r.id; }));
-      items.forEach(function (it, id) { if (!ids.has(id)) removeItem(id); });
+      items.forEach(function (it, id) { if (!ids.has(id) && !queue.length && !busy) removeItem(id); });
       rows.slice().reverse().forEach(enqueue);
       updateCount();
+      var c = await DW.loadEvent(db);
+      if (c.theme !== cfg.theme || c.title !== cfg.title || c.tagline !== cfg.tagline) applyTheme(c);
     } catch (e) {
       console.error(e);
       document.getElementById('offline').style.display = 'block';
@@ -230,7 +483,7 @@
   }
 
   async function init() {
-    layout();
+    applyTheme(await DW.loadEvent(db));
     try {
       var rows = await fetchRows();
       rows.forEach(function (r, i) { addQuiet(r, 80 * i); });
@@ -240,6 +493,8 @@
     db.channel('doodle-' + DW.EVENT)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: DW.TABLE, filter: 'event=eq.' + DW.EVENT },
         function (payload) { enqueue(payload.new); refreshCount(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: DW.EVENTS_TABLE, filter: 'event=eq.' + DW.EVENT },
+        function (payload) { if (payload.new && payload.new.theme) applyTheme(payload.new); })
       .subscribe();
     setInterval(sync, 15000);
   }
@@ -247,21 +502,13 @@
   var rt;
   addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(layout, 300); });
 
-  // ---- Snow ----
-  var snow = document.getElementById('snow'), sctx = snow.getContext('2d'), flakes = [];
-  function sizeSnow() { snow.width = innerWidth; snow.height = innerHeight; }
-  sizeSnow(); addEventListener('resize', sizeSnow);
-  for (var i = 0; i < 140; i++) flakes.push({ x: Math.random(), y: Math.random(), r: Math.random() * 2.4 + .6, s: Math.random() * .0012 + .0004, d: Math.random() * 6.28 });
-  (function tick(t) {
-    sctx.clearRect(0, 0, snow.width, snow.height);
-    sctx.fillStyle = 'rgba(255,255,255,.75)';
-    flakes.forEach(function (f) {
-      f.y += f.s; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
-      var x = (f.x + Math.sin(t / 2000 + f.d) * 0.01) * snow.width;
-      sctx.beginPath(); sctx.arc(x, f.y * snow.height, f.r, 0, 6.28); sctx.fill();
-    });
-    requestAnimationFrame(tick);
-  })(0);
+  // Debug helper for previews: DW_test() pops the newest drawing again.
+  window.DW_test = function () {
+    var o = Array.from(items.values()).pop();
+    if (!o) return 'no drawings';
+    var row = Object.assign({}, o.row, { id: o.row.id + '-t' + Date.now() });
+    queue.push(row); pump(); return 'ok';
+  };
 
   init();
 })();

@@ -80,3 +80,34 @@ on conflict (id) do update set public = true, file_size_limit = 1048576, allowed
 drop policy if exists "doodle upload" on storage.objects;
 create policy "doodle upload" on storage.objects
   for insert to anon, authenticated with check (bucket_id = 'doodle-wall');
+
+-- v2: theme per wall, picked by the operator ---------------------------------
+create table if not exists public.doodle_events (
+  event       text primary key check (char_length(event) <= 40),
+  theme       text not null default 'christmas' check (theme in ('christmas', 'qatar', 'newyear')),
+  title       text check (char_length(title) <= 80),
+  tagline     text check (char_length(tagline) <= 140),
+  updated_at  timestamptz not null default now()
+);
+alter table public.doodle_events enable row level security;
+drop policy if exists "doodle events read" on public.doodle_events;
+create policy "doodle events read" on public.doodle_events
+  for select to anon, authenticated using (true);
+insert into public.doodle_events (event, theme) values ('main', 'christmas') on conflict (event) do nothing;
+
+create or replace function public.doodle_set_event(p_event text, p_theme text, p_title text, p_tagline text, p_code text)
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  if not doodle_check(p_code) then return false; end if;
+  insert into doodle_events (event, theme, title, tagline, updated_at)
+  values (p_event, p_theme, nullif(trim(p_title), ''), nullif(trim(p_tagline), ''), now())
+  on conflict (event) do update set theme = excluded.theme, title = excluded.title,
+    tagline = excluded.tagline, updated_at = now();
+  return true;
+end $$;
+revoke all on function public.doodle_set_event(text, text, text, text, text) from public;
+grant execute on function public.doodle_set_event(text, text, text, text, text) to anon, authenticated;
+
+do $$ begin
+  alter publication supabase_realtime add table public.doodle_events;
+exception when duplicate_object then null; end $$;

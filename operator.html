@@ -28,6 +28,14 @@
   .tile .meta span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile button { padding: 6px; font-size: 13px; }
   #msg { min-height: 1.2em; }
+  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 0 0 16px; }
+  .card h2 { margin: 0 0 10px; font-size: 18px; }
+  .form { display: grid; grid-template-columns: 180px 1fr 1fr auto; gap: 10px; align-items: end; }
+  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; min-width: 0; }
+  select { font: inherit; padding: 10px 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .small { font-size: 13px; margin: 8px 0 0; }
+  @media (max-width: 760px) { .form { grid-template-columns: 1fr; } }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -47,6 +55,22 @@
     <button id="clear" class="danger">Clear the wall</button>
     <a id="openDisplay" target="_blank">Open display</a>
     <a id="openPhone" target="_blank">Open phone page</a>
+  </div>
+  <div class="card hidden" id="themeCard">
+    <h2>Wall theme</h2>
+    <div class="form">
+      <label>Theme
+        <select id="theme"></select>
+      </label>
+      <label>Title <span class="muted">(blank = theme default)</span>
+        <input id="title" maxlength="80">
+      </label>
+      <label>Tagline <span class="muted">(blank = theme default)</span>
+        <input id="tagline" maxlength="140">
+      </label>
+      <button id="saveTheme" class="primary">Apply to the wall</button>
+    </div>
+    <p class="muted small">The display switches right away. Phones pick it up the next time they open the page.</p>
   </div>
   <p id="msg" class="muted"></p>
   <div class="grid" id="grid"></div>
@@ -77,9 +101,32 @@
     if (res.error || !res.data) { msg('Wrong code'); try { sessionStorage.removeItem('dw-code'); } catch (e) {} return; }
     code = c;
     try { sessionStorage.setItem('dw-code', c); } catch (e) {}
-    $('login').classList.add('hidden'); $('tools').classList.remove('hidden');
-    msg(''); load();
+    $('login').classList.add('hidden'); $('tools').classList.remove('hidden'); $('themeCard').classList.remove('hidden');
+    msg(''); load(); loadTheme();
   }
+
+  Object.keys(DW.THEMES).forEach(function (k) {
+    var o = document.createElement('option'); o.value = k; o.textContent = DW.THEMES[k].label; $('theme').appendChild(o);
+  });
+  function showDefaults() {
+    var t = DW.theme($('theme').value);
+    $('title').placeholder = t.title; $('tagline').placeholder = t.tagline;
+  }
+  $('theme').onchange = showDefaults;
+
+  async function loadTheme() {
+    var res = await db.from(DW.EVENTS_TABLE).select('theme,title,tagline').eq('event', DW.EVENT).maybeSingle();
+    var c = res.data || { theme: 'christmas' };
+    $('theme').value = c.theme; $('title').value = c.title || ''; $('tagline').value = c.tagline || '';
+    showDefaults();
+  }
+
+  $('saveTheme').onclick = async function () {
+    var res = await db.rpc('doodle_set_event', {
+      p_event: DW.EVENT, p_theme: $('theme').value, p_title: $('title').value, p_tagline: $('tagline').value, p_code: code });
+    if (res.error || !res.data) { msg('Could not save the theme'); return; }
+    msg('Wall is now ' + DW.theme($('theme').value).label + '.');
+  };
 
   async function load() {
     var res = await db.from(DW.TABLE).select('*').eq('event', DW.EVENT).order('created_at', { ascending: false }).limit(1000);

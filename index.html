@@ -14,7 +14,7 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; }
   body {
-    background: radial-gradient(120% 80% at 50% 0%, #1d4a3b 0%, var(--bg) 70%);
+    background: radial-gradient(120% 80% at 50% 0%, var(--bg1, #1d4a3b) 0%, var(--bg2, #0a1f19) 70%);
     color: var(--ink); font-family: 'Fredoka', system-ui, sans-serif;
     display: flex; justify-content: center; overscroll-behavior: none;
   }
@@ -69,7 +69,7 @@
 <body>
 <div class="app">
   <header>
-    <h1>Doodle Wall</h1>
+    <h1 id="heading">Doodle Wall</h1>
     <p id="subtitle">Pick a shape and make it yours</p>
   </header>
 
@@ -117,8 +117,7 @@
 (function () {
   var db = DW.client();
   var SIZE = 600, PAD = 26, SCALE = (SIZE - PAD * 2) / 100;
-  var COLORS = ['#c8323b', '#8e1b24', '#f07f2e', '#e8b64c', '#ffe066', '#7ccf6b', '#2f8f4e', '#174d34',
-                '#6ec3f0', '#2e5fc8', '#8a5cd6', '#f28cb8', '#8b5a3c', '#ffffff', '#9aa3ad', '#23201c'];
+  var COLORS = DW.theme('christmas').palette;
 
   var pad = document.getElementById('pad'), ctx = pad.getContext('2d');
   var paint = document.createElement('canvas'); paint.width = paint.height = SIZE;
@@ -134,8 +133,17 @@
       : step === 'step-draw' ? 'Color it, draw on it, then send it' : 'Thank you!';
   }
 
+  // Theme comes from the operator's pick for this wall.
+  async function buildUI() {
+    var cfg = await DW.loadEvent(db);
+    var t = DW.theme(cfg.theme);
+    DW.applyVars(cfg.theme);
+    $('heading').textContent = cfg.title || t.title;
+    COLORS = t.palette; color = COLORS[0];
+    $('shapes').innerHTML = ''; $('colors').innerHTML = '';
+
   // Shape buttons
-  DW.SHAPES.forEach(function (s) {
+  DW.shapesFor(cfg.theme).forEach(function (s) {
     var b = document.createElement('button');
     b.className = 'shape-btn';
     b.innerHTML = '<svg viewBox="-4 -4 108 108"><path d="' + s.d + '" fill="#fff" stroke="#23201c" stroke-width="4" stroke-linejoin="round"/></svg><span>' + s.label + '</span>';
@@ -156,6 +164,8 @@
     };
     $('colors').appendChild(b);
   });
+  }
+  buildUI();
 
   function pickTool(btn) {
     tool = btn.dataset.tool;
